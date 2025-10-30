@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useCalculator } from '../contexts/CalculatorContext';
 import HeatGainChart from './HeatGainChart';
@@ -9,7 +8,7 @@ import Button from './ui/Button';
 const ResultsArea: React.FC = () => {
     const { state, dispatch } = useCalculator();
 
-    if (!state.results) {
+    if (!state.results || !state.activeResults) {
         return null;
     }
 
@@ -18,7 +17,7 @@ const ResultsArea: React.FC = () => {
     };
 
     return (
-        <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+        <div className="mt-6">
             <div className="mb-4 bg-white dark:bg-slate-800 p-4 rounded-lg shadow-md">
                 <label htmlFor="month-selector" className="mr-2 font-semibold">Zmień miesiąc do analizy:</label>
                 <select id="month-selector" value={state.currentMonth} onChange={handleMonthChange} className="p-2 rounded-md bg-slate-100 dark:bg-slate-700">
@@ -28,7 +27,7 @@ const ResultsArea: React.FC = () => {
                         </option>
                     ))}
                 </select>
-                <div className="text-sm mt-2 text-red-600 dark:text-red-400" dangerouslySetInnerHTML={{ __html: state.resultMessage }} />
+                <div className="text-sm mt-2 text-slate-600 dark:text-slate-400" dangerouslySetInnerHTML={{ __html: state.resultMessage }} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">

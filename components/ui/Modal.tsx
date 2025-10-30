@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 
 interface ModalProps {
@@ -40,7 +39,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer,
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
           <h2 className="text-xl font-semibold text-slate-800 dark:text-white">{title}</h2>
         </div>
-        <div className="px-6 py-4 flex-grow overflow-y-auto max-h-[70vh]">
+        <div className="px-6 py-4 flex-grow overflow-y-auto max-h-[85vh]">
           {children}
         </div>
         {footer && (

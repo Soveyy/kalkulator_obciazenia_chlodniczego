@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Window } from '../types';
 import { useCalculator } from '../contexts/CalculatorContext';
@@ -15,9 +14,9 @@ const WindowCard: React.FC<WindowCardProps> = ({ window }) => {
   const [isNew, setIsNew] = useState(false);
 
   useEffect(() => {
-    if(window.id === Math.max(...state.windows.map(w => w.id))) {
+    if(state.windows.length > 0 && window.id === Math.max(...state.windows.map(w => w.id))) {
       setIsNew(true);
-      const timer = setTimeout(() => setIsNew(false), 1500);
+      const timer = setTimeout(() => setIsNew(false), 1000);
       return () => clearTimeout(timer);
     }
   }, [window.id, state.windows]);
@@ -34,7 +33,7 @@ const WindowCard: React.FC<WindowCardProps> = ({ window }) => {
   const isEditing = state.modal.isOpen && state.modal.type === 'editWindow' && state.modal.data === window.id;
 
   return (
-    <div className={`relative bg-slate-100 dark:bg-slate-700 p-4 rounded-lg shadow-sm flex flex-col h-40 transition-all duration-300 ${isNew ? 'ring-2 ring-green-500' : ''} ${isEditing ? 'ring-2 ring-blue-500' : 'border border-transparent'}`}>
+    <div className={`relative bg-slate-100 dark:bg-slate-700 p-4 rounded-lg shadow-sm flex flex-col h-40 transition-all duration-300 ${isNew ? 'ring-2 ring-green-400 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-800' : ''} ${isEditing ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-800' : ''}`}>
        <CompassArrow rotation={rotation} />
       <h3 className="font-bold text-lg mb-2 text-slate-800 dark:text-white">Okno {window.id}</h3>
       <div className="flex-grow text-sm space-y-1 text-slate-600 dark:text-slate-300">

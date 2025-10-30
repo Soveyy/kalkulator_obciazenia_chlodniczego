@@ -84,8 +84,9 @@ const BulkShadingModal: React.FC = () => {
                         <div>
                             <label className="label-style">Typ osłony:</label>
                             <Select name="type" value={shading.type} onChange={handleChange}>
+                                {/* FIX: Cast label to string to resolve TypeScript error. */}
                                 {Object.entries(SHADING_TYPE_LABELS).map(([key, label]) => 
-                                    shadingDb[key] && <option key={key} value={key}>{label}</option>
+                                    shadingDb[key] && <option key={key} value={key}>{label as string}</option>
                                 )}
                             </Select>
                         </div>
@@ -95,16 +96,18 @@ const BulkShadingModal: React.FC = () => {
                              <div>
                                 <label className="label-style">Lokalizacja:</label>
                                 <Select name="location" value={shading.location} onChange={handleChange}>
+                                    {/* FIX: Cast label to string to resolve TypeScript error. */}
                                     {Object.entries(LOUVERS_LOCATION_LABELS).map(([key, label]) => 
-                                      shadingDb.louvers[key] && <option key={key} value={key}>{label}</option>
+                                      shadingDb.louvers[key] && <option key={key} value={key}>{label as string}</option>
                                     )}
                                 </Select>
                              </div>
                              <div>
                                 <label className="label-style">Kolor / Typ lameli:</label>
                                 <Select name="color" value={shading.color} onChange={handleChange}>
+                                    {/* FIX: Cast label to string to resolve TypeScript error. */}
                                     {Object.entries(LOUVERS_COLOR_LABELS).map(([key, label]) => 
-                                       shadingDb.louvers[shading.location!]?.[key] && <option key={key} value={key}>{label}</option>
+                                       shadingDb.louvers[shading.location!]?.[key] && <option key={key} value={key}>{label as string}</option>
                                     )}
                                 </Select>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{LOUVERS_COLOR_DESCRIPTIONS[shading.color!]}</p>
@@ -112,8 +115,9 @@ const BulkShadingModal: React.FC = () => {
                              <div>
                                 <label className="label-style">Ustawienie lameli:</label>
                                 <Select name="setting" value={shading.setting} onChange={handleChange}>
+                                    {/* FIX: Cast label to string to resolve TypeScript error. */}
                                     {Object.entries(LOUVERS_SETTING_LABELS).map(([key, label]) => 
-                                        shadingDb.louvers[shading.location!]?.[shading.color!]?.[key] && <option key={key} value={key}>{label}</option>
+                                        shadingDb.louvers[shading.location!]?.[shading.color!]?.[key] && <option key={key} value={key}>{label as string}</option>
                                     )}
                                 </Select>
                              </div>
@@ -125,7 +129,8 @@ const BulkShadingModal: React.FC = () => {
                                 <div>
                                     <label className="label-style">Typ materiału:</label>
                                     <Select name="material" value={shading.material} onChange={handleChange}>
-                                        {Object.entries(DRAPERY_MATERIAL_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                                        {/* FIX: Cast label to string to resolve TypeScript error. */}
+                                        {Object.entries(DRAPERY_MATERIAL_LABELS).map(([key, label]) => <option key={key} value={key}>{label as string}</option>)}
                                     </Select>
                                 </div>
                                 {shading.material !== 'sheer' && <div>
@@ -143,8 +148,9 @@ const BulkShadingModal: React.FC = () => {
                             <div>
                                 <label className="label-style">Rodzaj rolety:</label>
                                 <Select name="setting" value={shading.setting} onChange={handleChange}>
+                                     {/* FIX: Cast label to string to resolve TypeScript error. */}
                                      {Object.entries(ROLLER_SHADE_SETTING_LABELS).map(([key, label]) => 
-                                       shadingDb.roller_shades[key] && <option key={key} value={key}>{label}</option>
+                                       shadingDb.roller_shades[key] && <option key={key} value={key}>{label as string}</option>
                                     )}
                                 </Select>
                             </div>
@@ -154,8 +160,9 @@ const BulkShadingModal: React.FC = () => {
                              <div>
                                 <label className="label-style">Umiejscowienie:</label>
                                 <Select name="location" value={shading.location} onChange={handleChange}>
+                                     {/* FIX: Cast label to string to resolve TypeScript error. */}
                                      {Object.entries(SHADING_LOCATION_LABELS).map(([key, label]) => 
-                                        shadingDb.insect_screens[key] && <option key={key} value={key}>{label}</option>
+                                        shadingDb.insect_screens[key] && <option key={key} value={key}>{label as string}</option>
                                      )}
                                 </Select>
                              </div>

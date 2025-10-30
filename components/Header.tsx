@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useCalculator } from '../contexts/CalculatorContext';
 import { SunIcon, MoonIcon, InformationCircleIcon, ArrowsExpandIcon, ArrowsShrinkIcon } from './Icons';
+import Tooltip from './ui/Tooltip';
 
 const Header: React.FC = () => {
     const { theme, toggleTheme, dispatch } = useCalculator();
-    const [isFullscreen, setIsFullscreen] = useState(false);
+    const [isFullscreen, setIsFullscreen] = React.useState(false);
 
     const handleFullscreenChange = () => {
         setIsFullscreen(!!document.fullscreenElement);
     };
 
-    useEffect(() => {
+    React.useEffect(() => {
         document.addEventListener('fullscreenchange', handleFullscreenChange);
         return () => {
             document.removeEventListener('fullscreenchange', handleFullscreenChange);
@@ -35,13 +36,14 @@ const Header: React.FC = () => {
                 <h1 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-white">
                     Zaawansowany Kalkulator Zysków Ciepła
                 </h1>
-                <button
-                    onClick={() => dispatch({ type: 'SET_MODAL', payload: { type: 'methodology', isOpen: true } })}
-                    className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                    title="Pokaż metodologię"
-                >
-                    <InformationCircleIcon className="w-7 h-7" />
-                </button>
+                <Tooltip text="Pokaż metodologię" position="bottom">
+                     <button
+                        onClick={() => dispatch({ type: 'SET_MODAL', payload: { type: 'methodology', isOpen: true } })}
+                        className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                    >
+                        <InformationCircleIcon className="w-7 h-7" />
+                    </button>
+                </Tooltip>
             </div>
             <div className="flex items-center gap-2">
                  <button
