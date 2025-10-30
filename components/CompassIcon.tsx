@@ -1,5 +1,5 @@
 import React from 'react';
-import { WINDOW_DIRECTIONS } from '../../constants';
+import { WINDOW_DIRECTIONS } from '../constants';
 
 interface CompassIconProps {
   className?: string;
