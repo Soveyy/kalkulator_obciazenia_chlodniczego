@@ -6,7 +6,7 @@ import Select from '../ui/Select';
 import Checkbox from '../ui/Checkbox';
 import { useCalculator } from '../../contexts/CalculatorContext';
 import { Window, Shading } from '../../types';
-import { WINDOW_DIRECTIONS, WINDOW_PRESETS, WINDOW_TYPE_DESCRIPTIONS, SHADING_TYPE_LABELS, SHADING_LOCATION_LABELS, LOUVERS_LOCATION_LABELS, LOUVERS_COLOR_LABELS, LOUVERS_COLOR_DESCRIPTIONS, LOUVERS_SETTING_LABELS, DRAPERY_MATERIAL_LABELS, ROLLER_SHADE_SETTING_LABELS } from '../../constants';
+import { WINDOW_DIRECTIONS, WINDOW_PRESETS, WINDOW_TYPE_DESCRIPTIONS, SHADING_TYPE_LABELS, SHADING_LOCATION_LABELS, LOUVERS_LOCATION_LABELS, LOUVERS_COLOR_LABELS, LOUVERS_COLOR_DESCRIPTIONS, LOUVERS_SETTING_LABELS, DRAPERY_MATERIAL_LABELS, DRAPERY_MATERIAL_DESCRIPTIONS, ROLLER_SHADE_SETTING_LABELS } from '../../constants';
 import Tooltip from '../ui/Tooltip';
 
 const WindowEditModal: React.FC = () => {
@@ -72,34 +72,31 @@ const WindowEditModal: React.FC = () => {
         const { name, value, type } = e.target;
         const checked = (e.target as HTMLInputElement).checked;
         const isCheckbox = type === 'checkbox';
-
+    
         setShading(prev => {
             if (!prev) return null;
-            let newShading: any = { ...prev, [name]: isCheckbox ? checked : value };
+            let newShading = { ...prev, [name]: isCheckbox ? checked : value };
             
             if (name === 'type') {
-                newShading.setting = '';
+                // Reset to defaults for the new type to avoid keeping irrelevant old state
+                newShading.location = 'indoor';
                 newShading.color = 'light';
                 newShading.material = 'open';
-                if(value === 'louvers') newShading.setting = 'tilted_45';
-                if(value === 'roller_shades') newShading.setting = 'light_translucent';
-            }
-             if (name === 'location' && newShading.type === 'louvers') {
-                newShading.setting = 'tilted_45';
-             }
-            
-             if (newShading.type === 'draperies') {
-                const material = (name === 'material' ? value : newShading.material) as Shading['material'];
-                const color = (name === 'color' ? value : newShading.color) as Shading['color'];
-                if (material === 'sheer') {
-                    newShading.setting = 'sheer';
-                } else {
-                    newShading.setting = `${material}_${color}`;
+    
+                switch(value) {
+                    case 'louvers':
+                        newShading.setting = 'tilted_45';
+                        break;
+                    case 'roller_shades':
+                        newShading.setting = 'light_translucent';
+                        break;
+                    case 'draperies':
+                    case 'insect_screens':
+                        newShading.setting = ''; // not used
+                        break;
                 }
-                 newShading.material = material;
-                 newShading.color = color;
             }
-
+            
             return newShading as Shading;
         });
     };
@@ -236,6 +233,7 @@ const WindowEditModal: React.FC = () => {
                                     <Select name="material" value={shading.material} onChange={handleShadingChange}>
                                         {Object.entries(DRAPERY_MATERIAL_LABELS).map(([key, label]) => <option key={key} value={key}>{label as string}</option>)}
                                     </Select>
+                                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{DRAPERY_MATERIAL_DESCRIPTIONS[shading.material!]}</p>
                                 </div>
                                 {shading.material !== 'sheer' && <div>
                                     <label className="label-style">Kolor zasłon:</label>

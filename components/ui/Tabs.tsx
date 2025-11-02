@@ -13,7 +13,8 @@ const Tabs: React.FC = () => {
   const tabs: Tab[] = [
     { id: 'internal', label: '1. Zyski wewnętrzne' },
     { id: 'windows', label: '2. Okna' },
-    { id: 'summary', label: '3. Podsumowanie' },
+    { id: 'ventilation', label: '3. Wentylacja' },
+    { id: 'summary', label: '4. Podsumowanie' },
   ];
 
   return (

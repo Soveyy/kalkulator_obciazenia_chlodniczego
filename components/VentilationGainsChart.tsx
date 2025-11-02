@@ -9,7 +9,7 @@ const reorderDataForLocalTime = (data: number[], offset: number): number[] => {
     return Array.from({ length: 24 }, (_, i) => data[(i - offset + 24) % 24] || 0);
 };
 
-const InternalGainsChart: React.FC = () => {
+const VentilationGainsChart: React.FC = () => {
     const chartRef = useRef<HTMLCanvasElement>(null);
     const chartInstanceRef = useRef<Chart | null>(null);
     const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -72,15 +72,15 @@ const InternalGainsChart: React.FC = () => {
         const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
         const textColor = isDarkMode ? '#ecf0f1' : '#333';
 
-        const { internalGainsLoad } = state.activeResults;
+        const { ventilationLoad } = state.activeResults;
 
         const chartConfig: any = {
             type: 'bar',
             data: {
                 labels,
                 datasets: [
-                    { label: 'Obciążenie jawne', data: reorderDataForLocalTime(internalGainsLoad.sensible, offset), backgroundColor: 'rgba(231, 76, 60, 0.7)', stack: 'a' },
-                    { label: 'Obciążenie utajone', data: reorderDataForLocalTime(internalGainsLoad.latent, offset), backgroundColor: 'rgba(52, 152, 219, 0.7)', stack: 'a' }
+                    { label: 'Obciążenie jawne', data: reorderDataForLocalTime(ventilationLoad.sensible, offset), backgroundColor: 'rgba(230, 126, 34, 0.7)', stack: 'a' },
+                    { label: 'Obciążenie utajone', data: reorderDataForLocalTime(ventilationLoad.latent, offset), backgroundColor: 'rgba(52, 152, 219, 0.7)', stack: 'a' }
                 ]
             },
             options: {
@@ -88,10 +88,10 @@ const InternalGainsChart: React.FC = () => {
                 maintainAspectRatio: false,
                 scales: {
                     x: { title: { display: true, text: `Godzina (czas lokalny)`, color: textColor }, ticks: { color: textColor }, grid: { color: gridColor }, stacked: true },
-                    y: { title: { display: true, text: 'Obciążenie chłodnicze (W)', color: textColor }, ticks: { color: textColor }, grid: { color: gridColor }, stacked: true, beginAtZero: true }
+                    y: { title: { display: true, text: 'Obciążenie chłodnicze (W)', color: textColor }, ticks: { color: textColor }, grid: { color: gridColor }, stacked: true }
                 },
                 plugins: {
-                    title: { display: true, text: 'Godzinowe obciążenie chłodnicze od zysków wewnętrznych', color: textColor, font: { size: 16 } },
+                    title: { display: true, text: 'Godzinowe obciążenie od wentylacji mechanicznej', color: textColor, font: { size: 16 } },
                     legend: { labels: { color: textColor } },
                     tooltip: { 
                         mode: 'index',
@@ -138,4 +138,4 @@ const InternalGainsChart: React.FC = () => {
     );
 };
 
-export default InternalGainsChart;
+export default VentilationGainsChart;

@@ -23,8 +23,16 @@ const PeakSummary: React.FC = () => {
     const solarLoadPeak = loadComponents.solar[hourTotalCS_UTC] || 0;
     const conductionLoadPeak = loadComponents.conduction[hourTotalCS_UTC] || 0;
     const internalSensibleLoadPeak = loadComponents.internalSensible[hourTotalCS_UTC] || 0;
+    const ventilationSensibleLoadPeak = loadComponents.ventilationSensible[hourTotalCS_UTC] || 0;
+    
+    const internalLatentAtPeak = state.activeResults.components.internalGainsLatent[hourTotalCS_UTC] || 0;
+    const ventilationLatentAtPeak = state.activeResults.ventilationLoad.latent[hourTotalCS_UTC] || 0;
 
     const anyShadingEnabled = state.windows.some(win => win.shading && win.shading.enabled);
+
+    // FIX: Calculate total daily energy in kWh from hourly data in Watts.
+    const totalKWhCS = finalGains.clearSky.total.reduce((sum, val) => sum + val, 0) / 1000;
+    const totalKWhGlobal = finalGains.global.total.reduce((sum, val) => sum + val, 0) / 1000;
 
     return (
         <Card>
@@ -41,14 +49,28 @@ const PeakSummary: React.FC = () => {
                         <p>→ Słoneczne: {solarLoadPeak.toFixed(0)} W</p>
                         <p>→ Przewodzenie: {conductionLoadPeak.toFixed(0)} W</p>
                         <p>→ Wewnętrzne: {internalSensibleLoadPeak.toFixed(0)} W</p>
+                        <p>→ Wentylacja: {ventilationSensibleLoadPeak.toFixed(0)} W</p>
                     </div>
                 </div>
                  <div>
                     <p className="font-semibold text-blue-500">Obciążenie utajone:</p>
                      <p className="text-2xl font-bold">{latentAtPeak.toFixed(0)} W</p>
                      <div className="text-xs pl-2">
-                        <p>→ Wewnętrzne: {latentAtPeak.toFixed(0)} W</p>
+                        <p>→ Wewnętrzne: {internalLatentAtPeak.toFixed(0)} W</p>
+                        <p>→ Wentylacja: {ventilationLatentAtPeak.toFixed(0)} W</p>
                     </div>
+                </div>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                <h4 className="font-semibold text-slate-700 dark:text-slate-300 mb-2">Suma dobowa energii chłodniczej:</h4>
+                <div className="flex justify-between items-baseline text-sm">
+                    <span>Projektowa (Clear Sky):</span>
+                    <span className="font-bold text-lg text-orange-500">{totalKWhCS.toFixed(1)} kWh</span>
+                </div>
+                <div className="flex justify-between items-baseline text-sm">
+                    <span>Typowa (Global):</span>
+                    <span className="font-bold text-lg text-blue-500">{totalKWhGlobal.toFixed(1)} kWh</span>
                 </div>
             </div>
 

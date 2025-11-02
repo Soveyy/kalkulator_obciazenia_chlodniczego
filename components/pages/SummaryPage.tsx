@@ -5,10 +5,19 @@ import Button from '../ui/Button';
 import Card from '../ui/Card';
 
 const SummaryPage: React.FC = () => {
-    const { state, handleCalculate, isCalculating } = useCalculator();
+    const { state, handleCalculate, isCalculating, handleGenerateReport } = useCalculator();
     
     if (state.results) {
-        return <ResultsArea />;
+        return (
+            <>
+                <ResultsArea />
+                 <div className="text-center mt-6">
+                    <Button variant="primary" onClick={handleGenerateReport} disabled={state.isGeneratingReport}>
+                        {state.isGeneratingReport ? 'Generowanie raportu...' : 'Eksportuj do PDF'}
+                    </Button>
+                </div>
+            </>
+        );
     }
 
     return (

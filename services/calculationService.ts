@@ -1,13 +1,94 @@
-import { Window, AccumulationSettings, InternalGains, AllData, InputState, CalculationResults, Shading } from '../types';
-import { PEOPLE_ACTIVITY_LEVELS, LIGHTING_TYPES } from '../constants';
+import { Window, AccumulationSettings, InternalGains, AllData, InputState, CalculationResults, Shading, CalculationResultData } from '../types';
+import { PEOPLE_ACTIVITY_LEVELS, LIGHTING_TYPES, VENTILATION_EXCHANGER_TYPES } from '../constants';
+import { SHGC_DIFFUSE_MULTIPLIERS, SHGC_DIRECT_CORRECTION_CURVES } from '../src/config/shgcConfig';
 
-// A placeholder for a more complex RTS implementation
+
+function interpolate(x: number, x0: number, y0: number, x1: number, y1: number): number {
+    if (x1 === x0) return y0;
+    return y0 + (x - x0) * (y1 - y0) / (x1 - x0);
+}
+
+function getCorrectedSHGC(window: Window, nsrdbDirData: any, hour: number): { shgc_direct: number, shgc_diffuse: number } {
+    const angleOfIncidence = nsrdbDirData.theta?.[hour] ?? 90;
+    const baseSHGC = window.shgc;
+    const windowTypeKey = window.type as keyof typeof SHGC_DIFFUSE_MULTIPLIERS;
+    const diffuseMultiplier = SHGC_DIFFUSE_MULTIPLIERS[windowTypeKey] || 1.0;
+    const shgc_diffuse = baseSHGC * diffuseMultiplier;
+
+    if (angleOfIncidence >= 90) {
+        return { shgc_direct: 0, shgc_diffuse };
+    }
+
+    const curve = SHGC_DIRECT_CORRECTION_CURVES[windowTypeKey];
+    const angles = Object.keys(curve).map(Number);
+    
+    let x0 = angles.filter(a => a <= angleOfIncidence).pop();
+    if (x0 === undefined) x0 = 0;
+
+    let x1 = angles.find(a => a >= angleOfIncidence);
+    if (x1 === undefined) x1 = 90;
+
+    const y0 = curve[x0 as keyof typeof curve];
+    const y1 = curve[x1 as keyof typeof curve];
+
+    const correctionFactor = interpolate(angleOfIncidence, x0, y0, x1, y1);
+    
+    return { shgc_direct: baseSHGC * correctionFactor, shgc_diffuse };
+}
+
+function getShadingFactors(window: Window, allData: AllData, hour: number, month: string, forceDisableShading = false): { iac_beam: number, iac_diff: number, fr: number, is_indoor: boolean } {
+    const fallback = { iac_beam: 1.0, iac_diff: 1.0, fr: 1.0, is_indoor: false };
+    const { shading, type: windowType, direction } = window;
+
+    if (forceDisableShading || !shading.enabled) {
+        return fallback;
+    }
+
+    const db = allData.shading[windowType as keyof typeof allData.shading] || allData.shading.standard;
+    if (!db) return fallback;
+
+    const { type, location, color, setting, material } = shading;
+    const is_indoor = location === 'indoor';
+    let factors;
+
+    switch (type) {
+        case 'louvers':
+            factors = db.louvers?.[location]?.[color]?.[setting];
+            if (!factors) return { ...fallback, is_indoor };
+            
+            const nsrdbDirData = allData.nsrdb[month]?.[direction];
+            const omega = nsrdbDirData?.omega?.[hour] ?? 0;
+            const profileAngle = Math.abs(omega);
+
+            const iac_beam = interpolate(profileAngle, 0, factors.iac0, 60, factors.iac60);
+            return { iac_beam, iac_diff: factors.iac_diff, fr: factors.fr, is_indoor };
+        case 'draperies':
+            const draperyKey = material === 'sheer' ? 'sheer' : `${material}_${color}`;
+            factors = db.draperies?.[draperyKey];
+            break;
+        case 'roller_shades':
+            factors = db.roller_shades?.[setting];
+            break;
+        case 'insect_screens':
+            factors = db.insect_screens?.[location];
+            break;
+        default:
+            return fallback;
+    }
+
+    if (!factors) return { ...fallback, is_indoor };
+    const iac = factors.iac || 1.0;
+    return { iac_beam: iac, iac_diff: iac, fr: factors.fr, is_indoor };
+}
+
 function applyRTS(radiantGains: number[], rtsFactors: number[]): number[] {
     const coolingLoad = Array(24).fill(0);
-    for (let hour = 0; hour < 24; hour++) {
-        for (let i = 0; i < 24; i++) {
-            coolingLoad[(hour + i) % 24] += radiantGains[hour] * rtsFactors[i];
+    for (let n = 0; n < 24; n++) {
+        let currentLoad = 0;
+        for (let k = 0; k < 24; k++) {
+            currentLoad += (rtsFactors[k] || 0) * (radiantGains[(n - k + 24) % 24] || 0);
         }
+        coolingLoad[n] = currentLoad;
     }
     return coolingLoad;
 }
@@ -16,11 +97,15 @@ function getRtsFactors(accumulation: AccumulationSettings, allData: AllData, sol
     const { thermalMass, floorType, glassPercentage } = accumulation;
     const rtsSeriesType = solar ? 'solar' : 'nonsolar';
     
-    // Fallback logic in case the exact key doesn't exist.
     const fallbackFactors = allData.rts['medium']['panels']['50'][rtsSeriesType];
     
     try {
-        const factors = allData.rts[thermalMass]?.[floorType]?.[String(glassPercentage) as "10" | "50" | "90"]?.[rtsSeriesType];
+        let selectedGlassP: 10 | 50 | 90 = 50;
+        if (glassPercentage <= 30) selectedGlassP = 10;
+        else if (glassPercentage <= 70) selectedGlassP = 50;
+        else selectedGlassP = 90;
+
+        const factors = allData.rts[thermalMass]?.[floorType]?.[selectedGlassP]?.[rtsSeriesType];
         return factors || fallbackFactors;
     } catch(e) {
         console.error("Could not find RTS factors, using fallback.", e);
@@ -28,39 +113,20 @@ function getRtsFactors(accumulation: AccumulationSettings, allData: AllData, sol
     }
 }
 
-function getShadingFactor(window: Window, allData: AllData): number {
-    const { shading, type: windowType } = window;
-    if (!shading.enabled) return 1.0;
-    
-    // Find the correct DB for the window type, fallback to 'standard'
-    const shadingDbForWindowType = allData.shading[windowType as keyof typeof allData.shading] || allData.shading.standard;
-
-    try {
-        switch (shading.type) {
-            case 'louvers':
-                // Using iac_diff for diffuse radiation as a simplification
-                return shadingDbForWindowType.louvers?.[shading.location]?.[shading.color]?.[shading.setting]?.iac_diff || 1.0;
-            case 'draperies':
-                return shadingDbForWindowType.draperies?.[shading.setting]?.iac || 1.0;
-            case 'roller_shades':
-                return shadingDbForWindowType.roller_shades?.[shading.setting]?.iac || 1.0;
-            case 'insect_screens':
-                 return shadingDbForWindowType.insect_screens?.[shading.location]?.iac || 1.0;
-            default:
-                return 1.0;
-        }
-    } catch (e) {
-        console.error("Error getting shading factor", e);
-        return 1.0;
+function isHourActive(hour: number, startHour: number, endHour: number): boolean {
+    if (startHour < endHour) {
+        return hour >= startHour && hour < endHour;
+    } else if (startHour > endHour) {
+        return hour >= startHour || hour < endHour;
+    } else {
+        return true;
     }
 }
-
 
 export function generateTemperatureProfile(tExternalMax: number, month: string, allData: AllData): number[] {
     const tProfile: number[] = [];
     const monthData = allData.pvgis[month] || allData.pvgis['7'];
     if (!monthData || !monthData.T2m || monthData.T2m.length < 24) {
-        // Fallback to a simple sinusoidal profile if data is missing
         const tMin = tExternalMax - 10;
         for (let i = 0; i < 24; i++) {
             const temp = (tExternalMax + tMin) / 2 - ((tExternalMax - tMin) / 2) * Math.cos((2 * Math.PI * (i - 14)) / 24);
@@ -79,10 +145,9 @@ export function generateTemperatureProfile(tExternalMax: number, month: string, 
 export function calculateWorstMonth(windows: Window[], allData: AllData): string {
     if (!windows || windows.length === 0) return '7';
 
-    let maxSolarGain = 0;
+    let maxSolarGain = -Infinity;
     let worstMonth = '7';
 
-    // Ograniczenie do miesięcy od kwietnia do września
     for (let month = 4; month <= 9; month++) {
         let monthSolarGain = 0;
         const monthStr = month.toString();
@@ -91,7 +156,6 @@ export function calculateWorstMonth(windows: Window[], allData: AllData): string
             for (const window of windows) {
                 const area = window.width * window.height;
                 const dirData = allData.nsrdb[monthStr][window.direction];
-                // Używamy Gcs (Global Clear Sky) do oceny najgorszego przypadku
                 if (dirData && dirData.Gcs) {
                     const dailyIrradiance = dirData.Gcs.reduce((sum: number, val: number) => sum + val, 0);
                     monthSolarGain += dailyIrradiance * area * window.shgc;
@@ -108,7 +172,6 @@ export function calculateWorstMonth(windows: Window[], allData: AllData): string
     return worstMonth;
 }
 
-
 export function calculateGainsForMonth(
     windows: Window[],
     input: InputState,
@@ -121,132 +184,230 @@ export function calculateGainsForMonth(
 ): CalculationResults {
     const tInternal = parseFloat(input.tInternal) || 24;
     const roomArea = parseFloat(input.roomArea) || 20;
+    const rhInternal = (parseFloat(input.rhInternal) || 50) / 100;
+    
+    const monthInt = parseInt(month, 10);
+    const isSummerTime = (monthInt >= 4 && monthInt <= 10);
+    const offset = isSummerTime ? 2 : 1;
 
-    const solarGainsGlobal = Array(24).fill(0);
-    const solarGainsClearSky = Array(24).fill(0);
-    const conductionGains = Array(24).fill(0);
+    const ventilationLoadSensible = Array(24).fill(0);
+    const ventilationLoadLatent = Array(24).fill(0);
+
+    if (internalGains.ventilation && internalGains.ventilation.enabled) {
+        const { airflow, exchangerType } = internalGains.ventilation;
+        const exchanger = VENTILATION_EXCHANGER_TYPES[exchangerType];
+        const C_s = 0.342;
+        const C_l = 836.1;
+
+        const getHumidityRatioWithRH = (temp: number, rh: number) => {
+            const SVP = 611.2 * Math.exp(17.67 * temp / (temp + 243.5));
+            const VP = SVP * rh;
+            const P = 101325;
+            return 0.622 * VP / (P - VP);
+        };
+
+        const getHumidityRatioFromDewPoint = (dewPoint: number) => {
+            const SVP = 611.2 * Math.exp(17.67 * dewPoint / (dewPoint + 243.5));
+            const P_atm = 101325;
+            return (0.622 * SVP) / (P_atm - SVP);
+        };
+        
+        const wInternal = getHumidityRatioWithRH(tInternal, rhInternal);
+        const wExternal = getHumidityRatioFromDewPoint(parseFloat(input.tDewPoint) || 15);
+
+        for (let h = 0; h < 24; h++) {
+            const tExt = tExtProfile[h];
+            ventilationLoadSensible[h] = C_s * airflow * (tExt - tInternal) * (1 - exchanger.eta_s);
+            ventilationLoadLatent[h] = C_l * airflow * (wExternal - wInternal) * (1 - exchanger.eta_l);
+        }
+    }
+
+    const ventilationLoad: CalculationResultData = {
+        sensible: ventilationLoadSensible,
+        latent: ventilationLoadLatent,
+        total: ventilationLoadSensible.map((s, i) => s + ventilationLoadLatent[i]),
+    };
+
+    const finalGains = { global: { sensible: [], latent: [], total: [] }, clearSky: { sensible: [], latent: [], total: [] } };
+    const allComponents: any = {
+        clearSky: { solar: [], conduction: [] },
+        global: { solar: [], conduction: [] }
+    };
     const incidentSolarPower = Array(24).fill(0);
 
-    const rtsFactorsSolar = getRtsFactors(accumulation, allData, true);
-    const rtsFactorsNonSolar = getRtsFactors(accumulation, allData, false);
-
-    // Window Gains
-    windows.forEach(win => {
-        const area = win.width * win.height;
-        const shgc = win.shgc;
-        const u = win.u;
-        
-        const dirDataCS = allData.nsrdb[month]?.[win.direction] || { Gcs: Array(24).fill(0) };
-        const dirDataGlobal = allData.pvgis[month]?.[win.direction] || { G: Array(24).fill(0) };
-        
-        const shadingFactor = isWithoutShading ? 1.0 : getShadingFactor(win, allData);
-
-        for (let hour = 0; hour < 24; hour++) {
-            const solarGainCS = (dirDataCS.Gcs[hour] || 0) * area * shgc * shadingFactor;
-            const solarGainGlobal = (dirDataGlobal.G[hour] || 0) * area * shgc * shadingFactor;
-            solarGainsClearSky[hour] += solarGainCS;
-            solarGainsGlobal[hour] += solarGainGlobal;
-
-            const tempDiff = tExtProfile[hour] - tInternal;
-            conductionGains[hour] += u * area * tempDiff;
-            
-            incidentSolarPower[hour] += (dirDataCS.Gcs[hour] || 0) * area;
-        }
-    });
-    
-    const conductionGainsRadiant = conductionGains.map(g => g * 0.6); // Assume 60% is radiant
-    const conductionGainsConvective = conductionGains.map(g => g * 0.4); // Assume 40% is convective
-
-    // Internal Gains
     const internalGainsSensibleRadiant = Array(24).fill(0);
     const internalGainsSensibleConvective = Array(24).fill(0);
     const internalGainsLatent = Array(24).fill(0);
 
-    // People
     if (internalGains.people.enabled) {
         const activity = PEOPLE_ACTIVITY_LEVELS[internalGains.people.activityLevel];
         if (activity) {
-            for (let hour = internalGains.people.startHour; hour < internalGains.people.endHour; hour++) {
-                internalGainsSensibleRadiant[hour] += internalGains.people.count * activity.sensible * activity.radiantFraction;
-                internalGainsSensibleConvective[hour] += internalGains.people.count * activity.sensible * (1 - activity.radiantFraction);
-                internalGainsLatent[hour] += internalGains.people.count * activity.latent;
+            const startHourUTC = (internalGains.people.startHour - offset + 24) % 24;
+            const endHourUTC = (internalGains.people.endHour - offset + 24) % 24;
+            for (let hour = 0; hour < 24; hour++) {
+                if(isHourActive(hour, startHourUTC, endHourUTC)) {
+                    internalGainsSensibleRadiant[hour] += internalGains.people.count * activity.sensible * activity.radiantFraction;
+                    internalGainsSensibleConvective[hour] += internalGains.people.count * activity.sensible * (1 - activity.radiantFraction);
+                    internalGainsLatent[hour] += internalGains.people.count * activity.latent;
+                }
             }
         }
     }
 
-    // Lighting
     if (internalGains.lighting.enabled && roomArea > 0) {
         const lightingType = LIGHTING_TYPES[internalGains.lighting.type];
         if (lightingType) {
-            for (let h = internalGains.lighting.startHour; h < internalGains.lighting.endHour; h++) {
-                const totalHeat = internalGains.lighting.powerDensity * roomArea;
-                const heatToSpace = totalHeat * lightingType.spaceFraction;
-                internalGainsSensibleRadiant[h] += heatToSpace * lightingType.radiativeFraction;
-                internalGainsSensibleConvective[h] += heatToSpace * (1 - lightingType.radiativeFraction);
+            const startHourUTC = (internalGains.lighting.startHour - offset + 24) % 24;
+            const endHourUTC = (internalGains.lighting.endHour - offset + 24) % 24;
+            for (let h = 0; h < 24; h++) {
+                if(isHourActive(h, startHourUTC, endHourUTC)) {
+                    const totalHeat = internalGains.lighting.powerDensity * roomArea;
+                    const heatToSpace = totalHeat * lightingType.spaceFraction;
+                    internalGainsSensibleRadiant[h] += heatToSpace * lightingType.radiativeFraction;
+                    internalGainsSensibleConvective[h] += heatToSpace * (1 - lightingType.radiativeFraction);
+                }
             }
         }
     }
     
-    // Equipment
     internalGains.equipment.forEach(item => {
-        for (let hour = item.startHour; hour < item.endHour; hour++) {
-            internalGainsSensibleRadiant[hour] += item.power * item.quantity * 0.5; // Assume 50% radiant
-            internalGainsSensibleConvective[hour] += item.power * item.quantity * 0.5; // Assume 50% convective
+        const startHourUTC = (item.startHour - offset + 24) % 24;
+        const endHourUTC = (item.endHour - offset + 24) % 24;
+        for (let hour = 0; hour < 24; hour++) {
+            if (isHourActive(hour, startHourUTC, endHourUTC)) {
+                internalGainsSensibleRadiant[hour] += item.power * item.quantity * 0.5;
+                internalGainsSensibleConvective[hour] += item.power * item.quantity * 0.5;
+            }
         }
     });
 
-    // Accumulation (RTS) & Load Components (Clear Sky)
-    const solarLoadCS = accumulation.include ? applyRTS(solarGainsClearSky, rtsFactorsSolar) : solarGainsClearSky;
-    const conductionLoad = accumulation.include ? applyRTS(conductionGainsRadiant, rtsFactorsNonSolar).map((r, i) => r + conductionGainsConvective[i]) : conductionGains;
-    const internalSensibleLoad = accumulation.include ? applyRTS(internalGainsSensibleRadiant, rtsFactorsNonSolar).map((r, i) => r + internalGainsSensibleConvective[i]) : internalGainsSensibleRadiant.map((r, i) => r + internalGainsSensibleConvective[i]);
-    
-    const sensibleLoadCS = Array(24).fill(0).map((_, i) => solarLoadCS[i] + conductionLoad[i] + internalSensibleLoad[i]);
-    const totalLoadCS = sensibleLoadCS.map((g, i) => Math.max(0, g + internalGainsLatent[i]));
+    const rtsFactorsSolar = getRtsFactors(accumulation, allData, true);
+    const rtsFactorsNonSolar = getRtsFactors(accumulation, allData, false);
 
-    // Global calculations
-    const solarRadiantLoadGlobal = accumulation.include ? applyRTS(solarGainsGlobal, rtsFactorsSolar) : solarGainsGlobal;
-    const nonSolarRadiantLoad = accumulation.include ? applyRTS(conductionGainsRadiant.map((g,i) => g + internalGainsSensibleRadiant[i]), rtsFactorsNonSolar) : conductionGainsRadiant.map((g,i) => g + internalGainsSensibleRadiant[i]);
-    const radiantLoadGlobal = solarRadiantLoadGlobal.map((g, i) => g + nonSolarRadiantLoad[i]);
-    const sensibleLoadGlobal = radiantLoadGlobal.map((g, i) => g + conductionGainsConvective[i] + internalGainsSensibleConvective[i]);
-    const totalLoadGlobal = sensibleLoadGlobal.map((g, i) => Math.max(0, g + internalGainsLatent[i]));
+    let clearSkyConductionRadiant: number[] = [];
+    let clearSkySolarRadiant_Solar: number[] = [];
+    let clearSkySolarRadiant_NonSolar: number[] = [];
 
-    // For internal gains chart
-    const internalRadiantLoad = accumulation.include ? applyRTS(internalGainsSensibleRadiant, rtsFactorsNonSolar) : internalGainsSensibleRadiant;
-    const internalSensibleLoadChart = internalRadiantLoad.map((g,i) => g + internalGainsSensibleConvective[i]);
+    ['clearSky', 'global'].forEach(scenario => {
+        const solarConvectiveGains = Array(24).fill(0);
+        const solarRadiantGains_SolarRTS = Array(24).fill(0);
+        const solarRadiantGains_NonSolarRTS = Array(24).fill(0);
+        const conductionGainsConvective = Array(24).fill(0);
+        const conductionRadiantGains_NonSolarRTS = Array(24).fill(0);
+        
+        const componentSolarGains = Array(24).fill(0);
+        const componentConductionGains = Array(24).fill(0);
+
+        windows.forEach(win => {
+            const area = win.width * win.height;
+            const nsrdbDirData = allData.nsrdb[month]?.[win.direction];
+
+            if (nsrdbDirData) {
+                for (let h = 0; h < 24; h++) {
+                    const tExt = tExtProfile[h];
+                    const conductiveTotal = win.u * area * (tExt - tInternal);
+                    componentConductionGains[h] += conductiveTotal;
+                    
+                    const radiativeFractionCond = win.shgc <= 0.55 ? 0.46 : 0.33;
+                    conductionRadiantGains_NonSolarRTS[h] += conductiveTotal * radiativeFractionCond;
+                    conductionGainsConvective[h] += conductiveTotal * (1 - radiativeFractionCond);
+
+                    const shadingFactors = getShadingFactors(win, allData, h, month, isWithoutShading);
+                    const correctedSHGC = getCorrectedSHGC(win, nsrdbDirData, h);
+
+                    let beamIrradiance, diffuseIrradiance;
+                    if (scenario === 'clearSky') {
+                        beamIrradiance = nsrdbDirData.Gb?.[h] || 0;
+                        diffuseIrradiance = (nsrdbDirData.Gcs?.[h] || 0) - beamIrradiance;
+                        if (win.id === windows[0].id) {
+                             incidentSolarPower[h] += (nsrdbDirData.Gcs?.[h] || 0) * windows.reduce((a,w) => a + w.width*w.height, 0);
+                        }
+                    } else {
+                        const pvgisDirData = allData.pvgis[month]?.[win.direction];
+                        beamIrradiance = pvgisDirData?.Gb?.[h] || 0;
+                        diffuseIrradiance = (pvgisDirData?.G?.[h] || 0) - beamIrradiance;
+                    }
+
+                    const attenuatedBeamGain = (beamIrradiance * correctedSHGC.shgc_direct * area) * shadingFactors.iac_beam;
+                    const attenuatedDiffuseGain = (diffuseIrradiance * correctedSHGC.shgc_diffuse * area) * shadingFactors.iac_diff;
+                    componentSolarGains[h] += attenuatedBeamGain + attenuatedDiffuseGain;
+
+                    const radiantGain = (attenuatedBeamGain + attenuatedDiffuseGain) * shadingFactors.fr;
+                    const convectiveGain = (attenuatedBeamGain + attenuatedDiffuseGain) * (1 - shadingFactors.fr);
+                    solarConvectiveGains[h] += convectiveGain;
+                    
+                    if (shadingFactors.is_indoor) solarRadiantGains_NonSolarRTS[h] += radiantGain;
+                    else solarRadiantGains_SolarRTS[h] += radiantGain;
+                }
+            }
+        });
+
+        const solarLoadFromSolarRTS = accumulation.include ? applyRTS(solarRadiantGains_SolarRTS, rtsFactorsSolar) : solarRadiantGains_SolarRTS;
+        const nonSolarRadiantTotal = Array(24).fill(0).map((_, h) => 
+            internalGainsSensibleRadiant[h] + conductionRadiantGains_NonSolarRTS[h] + solarRadiantGains_NonSolarRTS[h]
+        );
+        const nonSolarCoolingLoad = accumulation.include ? applyRTS(nonSolarRadiantTotal, rtsFactorsNonSolar) : nonSolarRadiantTotal;
+
+        const totalConvectiveLoad = Array(24).fill(0).map((_, h) => 
+            internalGainsSensibleConvective[h] + solarConvectiveGains[h] + conductionGainsConvective[h] + ventilationLoadSensible[h]
+        );
+        
+        const sensibleLoad = Array(24).fill(0).map((_, h) => solarLoadFromSolarRTS[h] + nonSolarCoolingLoad[h] + totalConvectiveLoad[h]);
+        const totalLatentLoad = internalGainsLatent.map((l, i) => l + ventilationLoad.latent[i]);
+
+        finalGains[scenario as 'global' | 'clearSky'] = {
+            sensible: sensibleLoad,
+            latent: totalLatentLoad,
+            total: sensibleLoad.map((s, h) => s + totalLatentLoad[h])
+        };
+
+        allComponents[scenario].solar = componentSolarGains;
+        allComponents[scenario].conduction = componentConductionGains;
+
+        if (scenario === 'clearSky') {
+            clearSkyConductionRadiant = [...conductionRadiantGains_NonSolarRTS];
+            clearSkySolarRadiant_Solar = [...solarRadiantGains_SolarRTS];
+            clearSkySolarRadiant_NonSolar = [...solarRadiantGains_NonSolarRTS];
+        }
+    });
+
+    const conductionLoadFromRadiant = accumulation.include ? applyRTS(clearSkyConductionRadiant, rtsFactorsNonSolar) : clearSkyConductionRadiant;
+    const loadComponents_conduction = Array(24).fill(0).map((_, h) => allComponents.clearSky.conduction.map((c:number,i:number) => c * (1 - (windows[i]?.shgc <= 0.55 ? 0.46 : 0.33)))[h] + conductionLoadFromRadiant[h]);
     
-    // For window gains chart
-    const windowSolarLoadCS = accumulation.include ? applyRTS(solarGainsClearSky, rtsFactorsSolar) : solarGainsClearSky;
-    const windowConductionLoad = accumulation.include ? applyRTS(conductionGainsRadiant, rtsFactorsNonSolar).map((r, i) => r + conductionGainsConvective[i]) : conductionGains;
-    const windowSensibleLoadCS = windowSolarLoadCS.map((g, i) => g + windowConductionLoad[i]);
+    const internalLoadFromRadiant = accumulation.include ? applyRTS(internalGainsSensibleRadiant, rtsFactorsNonSolar) : internalGainsSensibleRadiant;
+    const loadComponents_internalSensible = Array(24).fill(0).map((_, h) => internalGainsSensibleConvective[h] + internalLoadFromRadiant[h]);
     
-    const windowSolarLoadGlobal = accumulation.include ? applyRTS(solarGainsGlobal, rtsFactorsSolar) : solarGainsGlobal;
-    const windowSensibleLoadGlobal = windowSolarLoadGlobal.map((g, i) => g + windowConductionLoad[i]);
+    const solarLoadFromSolarRTS = accumulation.include ? applyRTS(clearSkySolarRadiant_Solar, rtsFactorsSolar) : clearSkySolarRadiant_Solar;
+    const solarLoadFromNonSolarRTS = accumulation.include ? applyRTS(clearSkySolarRadiant_NonSolar, rtsFactorsNonSolar) : clearSkySolarRadiant_NonSolar;
+    const solarConvectiveTotal = Array(24).fill(0).map((_, h) => allComponents.clearSky.solar[h] * (1 - getShadingFactors(windows[0], allData, h, month, isWithoutShading).fr)); // Simplified for now
+    const loadComponents_solar = Array(24).fill(0).map((_, h) => solarConvectiveTotal[h] + solarLoadFromSolarRTS[h] + solarLoadFromNonSolarRTS[h]);
 
     return {
-        finalGains: {
-            global: { sensible: sensibleLoadGlobal, latent: internalGainsLatent, total: totalLoadGlobal },
-            clearSky: { sensible: sensibleLoadCS, latent: internalGainsLatent, total: totalLoadCS },
-        },
+        finalGains,
         internalGainsLoad: {
-            sensible: internalSensibleLoadChart, latent: internalGainsLatent, total: internalSensibleLoadChart.map((g,i) => g + internalGainsLatent[i])
+            sensible: loadComponents_internalSensible,
+            latent: internalGainsLatent,
+            total: loadComponents_internalSensible.map((g,i) => g + internalGainsLatent[i])
         },
         windowGainsLoad: {
-            global: { sensible: windowSensibleLoadGlobal, latent: Array(24).fill(0), total: windowSensibleLoadGlobal },
-            clearSky: { sensible: windowSensibleLoadCS, latent: Array(24).fill(0), total: windowSensibleLoadCS },
+            global: { sensible: finalGains.global.sensible.map((g,i) => g - loadComponents_internalSensible[i] - ventilationLoad.sensible[i]), latent: Array(24).fill(0), total: finalGains.global.sensible.map((g,i) => g - loadComponents_internalSensible[i] - ventilationLoad.sensible[i]) },
+            clearSky: { sensible: finalGains.clearSky.sensible.map((g,i) => g - loadComponents_internalSensible[i] - ventilationLoad.sensible[i]), latent: Array(24).fill(0), total: finalGains.clearSky.sensible.map((g,i) => g - loadComponents_internalSensible[i] - ventilationLoad.sensible[i]) },
         },
+        ventilationLoad,
         components: {
-            solarGainsGlobal,
-            solarGainsClearSky,
-            conductionGainsRadiant,
-            conductionGainsConvective,
+            solarGainsGlobal: allComponents.global.solar,
+            solarGainsClearSky: allComponents.clearSky.solar,
+            conductionGainsRadiant: clearSkyConductionRadiant,
+            conductionGainsConvective: Array(24).fill(0).map((_, h) => allComponents.clearSky.conduction[h] - clearSkyConductionRadiant[h]),
             internalGainsSensibleRadiant,
             internalGainsSensibleConvective,
             internalGainsLatent
         },
         loadComponents: {
-            solar: solarLoadCS,
-            conduction: conductionLoad,
-            internalSensible: internalSensibleLoad
+            solar: loadComponents_solar,
+            conduction: loadComponents_conduction,
+            internalSensible: loadComponents_internalSensible,
+            ventilationSensible: ventilationLoad.sensible,
         },
         incidentSolarPower,
     };

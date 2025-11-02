@@ -1,12 +1,13 @@
 import React, { createContext, useReducer, useContext, useEffect, useCallback, useState, ReactNode } from 'react';
-import { Window, AccumulationSettings, CalculationResults, AllData, Shading, InternalGains, EquipmentGains, InputState, AppTab } from '../types';
+import { Window, AccumulationSettings, CalculationResults, AllData, Shading, InternalGains, EquipmentGains, InputState, AppTab, VentilationGains } from '../types';
 import { calculateWorstMonth, calculateGainsForMonth, generateTemperatureProfile } from '../services/calculationService';
 import { loadAllData } from '../services/dataService';
+import { generatePdfReport } from '../services/reportGenerator';
 import { MONTH_NAMES } from '../constants';
 
 interface State {
     windows: Window[];
-    input: { tInternal: string; tExternal: string; roomArea: string };
+    input: InputState;
     accumulation: AccumulationSettings;
     internalGains: InternalGains;
     allData: AllData | null;
@@ -23,11 +24,13 @@ interface State {
     activeTab: AppTab;
     selectedDirection: string | null;
     hoveredDirection: string | null;
+    isSidebarOpen: boolean;
+    isGeneratingReport: boolean;
 }
 
 type Action = 
     | { type: 'SET_ALL_DATA'; payload: AllData }
-    | { type: 'SET_INPUT'; payload: { tInternal: string; tExternal: string; roomArea: string } }
+    | { type: 'SET_INPUT'; payload: InputState }
     | { type: 'ADD_WINDOW' }
     | { type: 'UPDATE_WINDOW'; payload: Window }
     | { type: 'DELETE_WINDOW'; payload: number }
@@ -35,6 +38,7 @@ type Action =
     | { type: 'UPDATE_ALL_SHADING'; payload: Partial<Shading> & { enabled: boolean } }
     | { type: 'SET_ACCUMULATION'; payload: AccumulationSettings }
     | { type: 'SET_INTERNAL_GAINS'; payload: InternalGains }
+    | { type: 'SET_VENTILATION_GAINS'; payload: VentilationGains }
     | { type: 'ADD_EQUIPMENT_ITEM'; payload?: { name: string; power: number } }
     | { type: 'DELETE_EQUIPMENT_ITEM'; payload: number }
     | { type: 'SET_RESULTS'; payload: { results: { withShading: CalculationResults, withoutShading: CalculationResults }; month: string; tExtProfile: number[], message: string } }
@@ -51,12 +55,14 @@ type Action =
     | { type: 'SET_STATE'; payload: Partial<State> }
     | { type: 'SET_ACTIVE_TAB'; payload: AppTab }
     | { type: 'SET_SELECTED_DIRECTION', payload: string | null }
-    | { type: 'SET_HOVERED_DIRECTION', payload: string | null };
+    | { type: 'SET_HOVERED_DIRECTION', payload: string | null }
+    | { type: 'TOGGLE_SIDEBAR' }
+    | { type: 'SET_GENERATING_REPORT', payload: boolean };
 
 
 const initialState: State = {
     windows: [],
-    input: { tInternal: '24', tExternal: '35', roomArea: '25' },
+    input: { projectName: 'Mój Projekt', tInternal: '24', rhInternal: '50', tExternal: '35', roomArea: '25', tDewPoint: '15' },
     accumulation: {
         include: true,
         thermalMass: 'very_heavy',
@@ -79,6 +85,11 @@ const initialState: State = {
             endHour: 16,
         },
         equipment: [],
+        ventilation: {
+            enabled: false,
+            airflow: 150,
+            exchangerType: 'counterflow_hrv',
+        },
     },
     allData: null,
     results: null,
@@ -94,6 +105,8 @@ const initialState: State = {
     activeTab: 'internal',
     selectedDirection: null,
     hoveredDirection: null,
+    isSidebarOpen: false,
+    isGeneratingReport: false,
 };
 
 let toastId = 0;
@@ -144,6 +157,8 @@ function calculatorReducer(state: State, action: Action): State {
             return { ...state, accumulation: action.payload };
         case 'SET_INTERNAL_GAINS':
             return { ...state, internalGains: action.payload };
+        case 'SET_VENTILATION_GAINS':
+            return { ...state, internalGains: { ...state.internalGains, ventilation: action.payload }};
         case 'ADD_EQUIPMENT_ITEM': {
             const newId = state.internalGains.equipment.length > 0 ? Math.max(...state.internalGains.equipment.map(e => e.id)) + 1 : 1;
             const newItem: EquipmentGains = {
@@ -228,6 +243,10 @@ function calculatorReducer(state: State, action: Action): State {
             return { ...state, selectedDirection: action.payload };
         case 'SET_HOVERED_DIRECTION':
             return { ...state, hoveredDirection: action.payload };
+        case 'TOGGLE_SIDEBAR':
+            return { ...state, isSidebarOpen: !state.isSidebarOpen };
+        case 'SET_GENERATING_REPORT':
+            return { ...state, isGeneratingReport: action.payload };
         default:
             return state;
     }
@@ -240,6 +259,7 @@ const CalculatorContext = createContext<{
     theme: 'light' | 'dark';
     toggleTheme: () => void;
     handleCalculate: () => void;
+    handleGenerateReport: () => void;
     isCalculating: boolean;
     toasts: any[];
 }>({
@@ -248,6 +268,7 @@ const CalculatorContext = createContext<{
     theme: 'light',
     toggleTheme: () => {},
     handleCalculate: () => {},
+    handleGenerateReport: () => {},
     isCalculating: false,
     toasts: [],
 });
@@ -262,6 +283,26 @@ export const CalculatorProvider: React.FC<{children: ReactNode}> = ({ children }
         const initialTheme = savedTheme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
         dispatch({ type: 'SET_STATE', payload: { theme: initialTheme }});
         document.documentElement.classList.toggle('dark', initialTheme === 'dark');
+    }, []);
+    
+    useEffect(() => {
+        if (state.isSidebarOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [state.isSidebarOpen]);
+
+    useEffect(() => {
+        const isMobile = window.innerWidth < 1024; // lg breakpoint
+        const hasVisited = localStorage.getItem('hasVisitedOnMobile');
+        if (isMobile && !hasVisited) {
+            dispatch({ type: 'TOGGLE_SIDEBAR' });
+            localStorage.setItem('hasVisitedOnMobile', 'true');
+        }
     }, []);
 
     useEffect(() => {
@@ -329,6 +370,24 @@ export const CalculatorProvider: React.FC<{children: ReactNode}> = ({ children }
         }
     }, [state.windows, state.input, state.accumulation, state.internalGains, initialCalculationDone, state.currentMonth, performCalculation]);
 
+    const handleGenerateReport = async () => {
+        if (!state.activeResults) {
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'Najpierw wykonaj obliczenia!', type: 'info' } });
+            return;
+        }
+        dispatch({ type: 'SET_GENERATING_REPORT', payload: true });
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Rozpoczynam generowanie raportu...', type: 'info' } });
+        try {
+            await generatePdfReport(state);
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'Raport PDF wygenerowany!', type: 'success' } });
+        } catch (error) {
+            console.error("PDF generation failed:", error);
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'Błąd podczas generowania raportu.', type: 'danger' } });
+        } finally {
+            dispatch({ type: 'SET_GENERATING_REPORT', payload: false });
+        }
+    };
+
     const enhancedDispatch = useCallback((action: Action) => {
         if (action.type === 'SAVE_PROJECT') {
             const projectData = {
@@ -349,7 +408,7 @@ export const CalculatorProvider: React.FC<{children: ReactNode}> = ({ children }
             } else {
                 dispatch({ type: 'ADD_TOAST', payload: { message: 'Nie znaleziono zapisanego projektu.', type: 'info' } });
             }
-        } else if (['SET_INPUT', 'SET_ACCUMULATION', 'SET_INTERNAL_GAINS', 'ADD_WINDOW', 'UPDATE_WINDOW', 'DELETE_WINDOW', 'DUPLICATE_WINDOW', 'UPDATE_ALL_SHADING', 'ADD_EQUIPMENT_ITEM', 'DELETE_EQUIPMENT_ITEM'].includes(action.type)) {
+        } else if (['SET_INPUT', 'SET_ACCUMULATION', 'SET_INTERNAL_GAINS', 'ADD_WINDOW', 'UPDATE_WINDOW', 'DELETE_WINDOW', 'DUPLICATE_WINDOW', 'UPDATE_ALL_SHADING', 'ADD_EQUIPMENT_ITEM', 'DELETE_EQUIPMENT_ITEM', 'SET_VENTILATION_GAINS'].includes(action.type)) {
              if (initialCalculationDone) {
                  dispatch(action);
              } else {
@@ -361,7 +420,7 @@ export const CalculatorProvider: React.FC<{children: ReactNode}> = ({ children }
         }
     }, [state, initialCalculationDone]);
 
-    const value = { state, dispatch: enhancedDispatch, theme: state.theme, toggleTheme, handleCalculate, isCalculating, toasts: state.toasts };
+    const value = { state, dispatch: enhancedDispatch, theme: state.theme, toggleTheme, handleCalculate, isCalculating, toasts: state.toasts, handleGenerateReport };
 
     return (
         <CalculatorContext.Provider value={value}>

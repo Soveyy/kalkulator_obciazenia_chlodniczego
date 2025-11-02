@@ -5,6 +5,7 @@ import Sidebar from './components/Sidebar';
 import Tabs from './components/ui/Tabs';
 import InternalGainsPage from './components/pages/InternalGainsPage';
 import WindowsPage from './components/pages/WindowsPage';
+import VentilationPage from './components/pages/VentilationPage';
 import SummaryPage from './components/pages/SummaryPage';
 import MethodologyModal from './components/modals/MethodologyModal';
 import TempDatabaseModal from './components/modals/TempDatabaseModal';
@@ -22,6 +23,8 @@ const AppContent: React.FC = () => {
           return <InternalGainsPage />;
         case 'windows':
           return <WindowsPage />;
+        case 'ventilation':
+          return <VentilationPage />;
         case 'summary':
           return <SummaryPage />;
         default:

@@ -52,48 +52,59 @@ export const RECORD_TEMPERATURES: { [key: number]: number } = {
 
 // Shading constants
 export const SHADING_TYPE_LABELS: { [key: string]: string } = {
-    louvers: 'Żaluzje / Fasadowe',
-    draperies: 'Zasłony',
+    louvers: 'Żaluzje (poziome)',
+    draperies: 'Zasłony materiałowe',
     roller_shades: 'Rolety',
     insect_screens: 'Moskitiery'
 };
 
 export const SHADING_LOCATION_LABELS: { [key: string]: string } = {
     indoor: 'Wewnętrzne',
-    outdoor: 'Zewnętrzne'
+    outdoor: 'Zewnętrzna (fasadowa)'
 };
 
 export const LOUVERS_LOCATION_LABELS = SHADING_LOCATION_LABELS;
 
 export const LOUVERS_COLOR_LABELS: { [key: string]: string } = {
-    light: 'Jasne, matowe',
-    medium: 'Średnie, matowe',
-    dark: 'Ciemne, matowe'
+    light: 'Jasne',
+    medium: 'Średnie',
+    dark: 'Ciemne'
 };
 
 export const LOUVERS_COLOR_DESCRIPTIONS: { [key: string]: string } = {
-    light: 'Współczynnik odbicia promieniowania słonecznego > 0.6',
-    medium: 'Współczynnik odbicia promieniowania słonecznego 0.3 - 0.6',
-    dark: 'Współczynnik odbicia promieniowania słonecznego < 0.3'
+    light: '(Refleksyjność ~0.8): np. białe lub polerowane aluminium. Odbijają najwięcej promieniowania.',
+    medium: '(Refleksyjność ~0.5): np. matowe, malowane lamele lub jasne drewno. Zrównoważone odbicie i absorpcja.',
+    dark: '(Refleksyjność ~0.15): np. ciemne drewno, antracyt. Pochłaniają najwięcej promieniowania, nagrzewając się.'
 };
 
 export const LOUVERS_SETTING_LABELS: { [key: string]: string } = {
     open_0: 'Otwarte (0°)',
     tilted_45: 'Uchylone (45°)',
-    closed_90: 'Zamknięte (90°)'
+    closed: 'Zamknięte'
 };
 
 export const DRAPERY_MATERIAL_LABELS: { [key: string]: string } = {
-    open: 'Tkanina otwarta',
-    semiopen: 'Tkanina półotwarta',
-    closed: 'Tkanina zamknięta',
-    sheer: 'Tkanina przezroczysta'
+    open: 'Splot otwarty',
+    semiopen: 'Splot półotwarty',
+    closed: 'Splot zamknięty',
+    sheer: 'Firanka'
+};
+
+export const DRAPERY_MATERIAL_DESCRIPTIONS: { [key: string]: string } = {
+    open: 'Wskazówka: Lekka tkanina, przepuszczająca dużo światła i zapewniająca widok.',
+    semiopen: 'Wskazówka: Tkanina pośrednia, częściowo przepuszczająca światło.',
+    closed: 'Wskazówka: Ciężka tkanina, nieprzezroczysta, blokująca światło.',
+    sheer: 'Wskazówka: Bardzo lekka, transparentna tkanina.'
 };
 
 export const ROLLER_SHADE_SETTING_LABELS: { [key: string]: string } = {
-    light_translucent: 'Jasna, półprzezroczysta',
-    light_opaque: 'Jasna, nieprzezroczysta',
-    dark_opaque: 'Ciemna, nieprzezroczysta'
+    light_translucent: 'Jasna przezroczysta',
+    light_gray_translucent: 'Jasnoszara przezroczysta',
+    dark_gray_translucent: 'Ciemnoszara przezroczysta',
+    reflective_white_translucent: 'Biała refleksyjna - przezroczysta',
+    white_opaque: 'Biała nieprzezroczysta',
+    dark_opaque: 'Ciemna nieprzezroczysta',
+    reflective_white_opaque: 'Biała refleksyjna - nieprzezroczysta'
 };
 
 // Internal gains constants
@@ -134,4 +145,11 @@ export const WINDOW_TYPE_DESCRIPTIONS: { [key: string]: string } = {
     standard: 'Najpopularniejszy typ okien montowany od końca lat 90. do ok. 2015 roku. Spełniały starsze normy (np. WT2014, U ≤ 1,3 W/m²K). Posiadają dwie szyby, z czego jedna pokryta jest powłoką niskoemisyjną (Low-E), a przestrzeń jest wypełniona gazem szlachetnym. Mają wyższy współczynnik SHGC (ok. 0,55-0,65) niż okna 3-szybowe.',
     older_double: 'Okna zespolone z lat 80. i 90., sprzed ery powszechnego stosowania powłok niskoemisyjnych. Zbudowane z dwóch szyb, ale przestrzeń między nimi często wypełniona jest zwykłym powietrzem. Ich izolacyjność znacznie gorsza (U > 2,0 W/m²K) oraz przepuszczają więcej energii słonecznej (SHGC > 0,70).',
     historic: 'Okna spotykane w budynkach zabytkowych lub bardzo starych. Zbudowane z pojedynczej tafli szkła. Zapewniają minimalną izolację termiczną (U > 5,0 W/m²K) i przepuszczają niemal całą energię słoneczną (SHGC > 0,80).'
+};
+
+export const VENTILATION_EXCHANGER_TYPES: { [key: string]: { label: string, eta_s: number, eta_l: number, description: string } } = {
+    counterflow_hrv: { label: 'Przeciwprądowy (Standard / HRV)', eta_s: 0.88, eta_l: 0.00, description: 'Płyty nieprzepuszczalne dla wilgoci. Tylko odzysk temperatury.' },
+    counterflow_erv: { label: 'Przeciwprądowy (Entalpiczny / ERV)', eta_s: 0.80, eta_l: 0.70, description: 'Membrana polimerowa umożliwia dyfuzję pary wodnej.' },
+    rotary_condensing: { label: 'Obrotowy (Standard / Kondensacyjny)', eta_s: 0.85, eta_l: 0.10, description: 'Latem odzysk wilgoci jest minimalny lub pomijalny.' },
+    rotary_sorption: { label: 'Obrotowy (Sorpcyjny / Zeolitowy)', eta_s: 0.85, eta_l: 0.80, description: 'Aktywna adsorpcja wilgoci przez materiał higroskopijny (np. zeolit).' },
 };

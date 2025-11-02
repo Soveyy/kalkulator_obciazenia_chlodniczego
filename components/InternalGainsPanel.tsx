@@ -14,7 +14,17 @@ const InternalGainsPanel: React.FC = () => {
     const handlePeopleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
         const checked = (e.target as HTMLInputElement).checked;
-        const val = type === 'checkbox' ? checked : (e.target.type === 'number' ? parseInt(value) || 0 : value);
+        
+        let val: string | number | boolean;
+        if (type === 'checkbox') {
+            val = checked;
+        } else if (name === 'count' || name === 'startHour' || name === 'endHour') {
+            val = parseInt(value, 10);
+            if (isNaN(val)) val = 0;
+        } else {
+            val = value;
+        }
+
         dispatch({ type: 'SET_INTERNAL_GAINS', payload: { ...state.internalGains, people: { ...state.internalGains.people, [name]: val } } });
     };
 
@@ -148,7 +158,7 @@ const InternalGainsPanel: React.FC = () => {
             {/* Equipment */}
             <Card className="flex flex-col">
                 <h3 className="font-semibold mb-3">Urządzenia</h3>
-                <div className="flex gap-2 mb-4 flex-wrap">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4 lg:flex lg:flex-wrap">
                     {Object.entries(EQUIPMENT_PRESETS).map(([key, preset]) => (
                         <Button key={key} variant="secondary" className="text-xs py-1" onClick={() => addEquipment(key)}>+ {preset.label}</Button>
                     ))}

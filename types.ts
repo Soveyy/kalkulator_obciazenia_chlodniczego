@@ -1,6 +1,6 @@
 import { ChartType } from 'chart.js';
 
-export type AppTab = 'internal' | 'windows' | 'summary';
+export type AppTab = 'internal' | 'windows' | 'ventilation' | 'summary';
 
 export interface Shading {
   enabled: boolean;
@@ -58,11 +58,22 @@ export interface InternalGains {
     people: PeopleGains;
     lighting: LightingGains;
     equipment: EquipmentGains[];
+    ventilation: VentilationGains;
 }
+
+export interface VentilationGains {
+    enabled: boolean;
+    airflow: number; // m3/h
+    exchangerType: 'counterflow_hrv' | 'counterflow_erv' | 'rotary_condensing' | 'rotary_sorption';
+}
+
 export interface InputState {
+    projectName: string;
     tInternal: string;
+    rhInternal: string;
     tExternal: string;
     roomArea: string;
+    tDewPoint: string;
 }
 
 export interface CalculationResultData {
@@ -91,6 +102,7 @@ export interface CalculationLoadComponents {
     solar: number[];
     conduction: number[];
     internalSensible: number[];
+    ventilationSensible: number[];
 }
 
 export interface CalculationResults {
@@ -103,8 +115,14 @@ export interface CalculationResults {
         global: CalculationResultData;
         clearSky: CalculationResultData;
     },
+    ventilationLoad: CalculationResultData;
     components: CalculationComponents;
-    loadComponents: CalculationLoadComponents;
+    loadComponents: {
+      solar: number[],
+      conduction: number[],
+      internalSensible: number[],
+      ventilationSensible: number[],
+    };
     incidentSolarPower: number[];
 }
 

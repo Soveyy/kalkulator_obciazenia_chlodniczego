@@ -1,5 +1,5 @@
 {
-  "name": "advanced-heat-gain-calculator",
+  "name": "advanced-heat-gain-calculator-v2",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -11,7 +11,10 @@
   "dependencies": {
     "react-dom": "^19.2.0",
     "chart.js": "^4.5.1",
-    "react": "^19.2.0"
+    "react": "^19.2.0",
+    "jspdf": "^2.5.1",
+    "html2canvas": "^1.4.1",
+    "jspdf-autotable": "^3.8.2"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
