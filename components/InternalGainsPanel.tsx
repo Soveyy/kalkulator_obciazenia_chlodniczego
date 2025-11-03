@@ -111,7 +111,7 @@ const InternalGainsPanel: React.FC = () => {
     };
     
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* People */}
             <Card>
                 <h3 className="font-semibold mb-3">Ludzie</h3>
@@ -192,7 +192,7 @@ const InternalGainsPanel: React.FC = () => {
             </Card>
             
             {/* Equipment */}
-            <Card className="flex flex-col">
+            <Card className="flex flex-col lg:col-span-2">
                 <h3 className="font-semibold mb-3">Urządzenia</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4 lg:flex lg:flex-wrap">
                     {Object.entries(EQUIPMENT_PRESETS).map(([key, preset]) => (

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'heat-gain-calculator-v2';
+const CACHE_NAME = 'heat-gain-calculator-v0.11';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -55,8 +55,12 @@ self.addEventListener('fetch', event => {
             return response;
           }
         ).catch(error => {
-            console.error('Fetch failed; returning offline page instead.', error);
-            // Optionally, return a fallback offline page, e.g., caches.match('/offline.html');
+            console.log('Network request failed. Trying fallback for versioned script.', error);
+            const url = new URL(event.request.url);
+            // If the failed request was for our versioned main script, try to serve the un-versioned one from cache.
+            if (url.pathname.endsWith('/index.tsx')) {
+              return caches.match('/index.tsx');
+            }
         });
       })
   );

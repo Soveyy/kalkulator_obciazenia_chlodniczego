@@ -31,7 +31,7 @@ interface State {
 type Action = 
     | { type: 'SET_ALL_DATA'; payload: AllData }
     | { type: 'SET_INPUT'; payload: InputState }
-    | { type: 'ADD_WINDOW' }
+    | { type: 'ADD_WINDOW'; payload: Omit<Window, 'id'> }
     | { type: 'UPDATE_WINDOW'; payload: Window }
     | { type: 'DELETE_WINDOW'; payload: number }
     | { type: 'DUPLICATE_WINDOW'; payload: number }
@@ -119,10 +119,10 @@ function calculatorReducer(state: State, action: Action): State {
         case 'SET_INPUT':
             return { ...state, input: action.payload };
         case 'ADD_WINDOW': {
+            const newWindowPayload = action.payload as Omit<Window, 'id'>;
             const newWindow: Window = {
+                ...newWindowPayload,
                 id: state.windows.length > 0 ? Math.max(...state.windows.map(w => w.id)) + 1 : 1,
-                type: 'modern', direction: 'S', u: 0.9, shgc: 0.5, width: 1.0, height: 2.2,
-                shading: { enabled: false, type: 'louvers', location: 'indoor', color: 'light', setting: 'tilted_45', material: 'open' }
             };
             return { ...state, windows: [...state.windows, newWindow] };
         }

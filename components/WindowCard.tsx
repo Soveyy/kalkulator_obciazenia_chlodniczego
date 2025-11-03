@@ -111,7 +111,7 @@ const WindowCard: React.FC<WindowCardProps> = ({ window }) => {
   const isEditing = state.modal.isOpen && state.modal.type === 'editWindow' && state.modal.data === window.id;
 
   return (
-    <div className={`relative bg-slate-100 dark:bg-slate-700 p-4 rounded-lg shadow-sm flex flex-col h-48 transition-all duration-300 ${isNew ? 'ring-2 ring-green-400 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-800' : ''} ${isEditing ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-800' : ''}`}>
+    <div className={`relative bg-slate-100 dark:bg-slate-700 p-4 rounded-lg shadow-sm flex flex-col min-h-48 transition-all duration-300 ${isNew ? 'ring-2 ring-green-400 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-800' : ''} ${isEditing ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-800' : ''}`}>
        <CompassArrow rotation={rotation} />
       <h3 className="font-bold text-lg mb-1 text-slate-800 dark:text-white">Okno {window.id}</h3>
       <div className="flex-grow text-sm space-y-1 text-slate-600 dark:text-slate-300">
@@ -119,10 +119,10 @@ const WindowCard: React.FC<WindowCardProps> = ({ window }) => {
         <p>Powierzchnia: <strong className="text-slate-800 dark:text-slate-100">{area} m²</strong></p>
         <ShadingStatus shading={window.shading} />
       </div>
-      <div className="flex gap-2 mt-auto">
-        <Button onClick={handleEdit} className="flex-1 py-1 text-xs"><PencilIcon className="w-4 h-4 inline-block mr-1"/>Edytuj</Button>
-        <Button onClick={handleDuplicate} variant="secondary" className="flex-1 py-1 text-xs"><DocumentDuplicateIcon className="w-4 h-4 inline-block mr-1"/>Duplikuj</Button>
-        <Button onClick={handleDelete} variant="danger" className="flex-1 py-1 text-xs"><TrashIcon className="w-4 h-4 inline-block mr-1"/>Usuń</Button>
+      <div className="grid grid-cols-3 gap-2 mt-auto">
+        <Button onClick={handleEdit} className="py-1 px-2 text-xs"><PencilIcon className="w-4 h-4 inline-block mr-1"/>Edytuj</Button>
+        <Button onClick={handleDuplicate} variant="secondary" className="py-1 px-2 text-xs"><DocumentDuplicateIcon className="w-4 h-4 inline-block mr-1"/>Duplikuj</Button>
+        <Button onClick={handleDelete} variant="danger" className="py-1 px-2 text-xs"><TrashIcon className="w-4 h-4 inline-block mr-1"/>Usuń</Button>
       </div>
     </div>
   );

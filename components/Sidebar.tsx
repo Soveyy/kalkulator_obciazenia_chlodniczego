@@ -146,6 +146,15 @@ const Sidebar: React.FC = () => {
                                             <option value={90}>90%</option>
                                         </Select>
                                     </div>
+                                    <div className="mt-4">
+                                        <Button 
+                                            variant="secondary" 
+                                            fullWidth 
+                                            onClick={() => dispatch({ type: 'SET_MODAL', payload: { isOpen: true, type: 'rtsVisualizer' } })}
+                                        >
+                                            Pokaż wizualizację krzywych RTS
+                                        </Button>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -153,7 +162,7 @@ const Sidebar: React.FC = () => {
                 </div>
                 
                 <div className="mt-auto pt-4 text-center text-xs text-slate-400">
-                    Wersja 1.1.0
+                    Wersja 0.11
                 </div>
                 <style>{`.label-style { display: block; text-sm font-medium mb-1 text-slate-700 dark:text-slate-300; }`}</style>
             </aside>

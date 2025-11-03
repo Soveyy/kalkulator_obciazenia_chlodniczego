@@ -11,6 +11,7 @@ import MethodologyModal from './components/modals/MethodologyModal';
 import TempDatabaseModal from './components/modals/TempDatabaseModal';
 import WindowEditModal from './components/modals/WindowEditModal';
 import BulkShadingModal from './components/modals/BulkShadingModal';
+import RtsVisualizerModal from './components/modals/RtsVisualizerModal';
 import ToastContainer from './components/ToastContainer';
 import CompassHelper from './components/CompassHelper';
 
@@ -55,6 +56,7 @@ const App: React.FC = () => {
       <TempDatabaseModal />
       <WindowEditModal />
       <BulkShadingModal />
+      <RtsVisualizerModal />
       <ToastContainer />
     </CalculatorProvider>
   );

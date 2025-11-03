@@ -15,7 +15,7 @@ const WindowConfigurator: React.FC = () => {
           {state.windows.length > 0 && <span className="text-base font-normal text-slate-500 dark:text-slate-400 ml-2">({state.windows.length})</span>}
         </h2>
         <div className="flex gap-2">
-           <Button onClick={() => dispatch({ type: 'ADD_WINDOW' })} className="py-1.5 px-3 text-sm flex items-center gap-1">
+           <Button onClick={() => dispatch({ type: 'SET_MODAL', payload: { isOpen: true, type: 'editWindow', data: null } })} className="py-1.5 px-3 text-sm flex items-center gap-1">
               <PlusIcon className="w-4 h-4" /> Dodaj
             </Button>
            <Button onClick={() => dispatch({ type: 'SET_MODAL', payload: { isOpen: true, type: 'bulkShading' } })} variant="secondary" className="py-1.5 px-3 text-sm">
@@ -23,14 +23,14 @@ const WindowConfigurator: React.FC = () => {
            </Button>
         </div>
       </div>
-      <div className="flex-grow overflow-y-auto pr-2 -mr-2 min-h-[300px]">
+      <div className="flex-grow overflow-y-auto pr-2 -mr-2 min-h-[300px] max-h-[calc(100vh-22rem)]">
         {state.windows.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center text-slate-500 dark:text-slate-400 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-8">
             <h3 className="text-lg font-semibold mb-2">Brak zdefiniowanych okien</h3>
             <p>Kliknij przycisk "Dodaj", aby rozpocząć konfigurację.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-4 p-2">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4 p-2">
             {state.windows.map(win => (
               <WindowCard key={win.id} window={win} />
             ))}

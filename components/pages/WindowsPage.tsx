@@ -9,8 +9,8 @@ const WindowsPage: React.FC = () => {
     const { state } = useCalculator();
 
     return (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
-            <div className="flex flex-col gap-6">
+        <div className="flex flex-col xl:flex-row gap-6 items-start">
+            <div className="w-full xl:w-[640px] 2xl:w-[960px] flex-shrink-0 flex flex-col gap-6">
                 {state.results && (
                      <Card>
                         <p className="text-sm">
@@ -20,7 +20,9 @@ const WindowsPage: React.FC = () => {
                 )}
                 <WindowConfigurator />
             </div>
-            <WindowGainsChart />
+            <div className="w-full flex-1">
+                 <WindowGainsChart />
+            </div>
         </div>
     );
 };

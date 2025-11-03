@@ -13,23 +13,36 @@ const WindowEditModal: React.FC = () => {
     const { state, dispatch } = useCalculator();
     const { isOpen, type, data: windowId } = state.modal;
     const isModalOpen = isOpen && type === 'editWindow';
-    
-    const originalWindow = state.windows.find(w => w.id === windowId);
-    
+    const isNew = windowId === null;
+
     const [window, setWindow] = useState<Window | null>(null);
     const [shading, setShading] = useState<Shading | null>(null);
 
     useEffect(() => {
-        if (isModalOpen && originalWindow) {
-            const newWindow = JSON.parse(JSON.stringify(originalWindow));
-            setWindow(newWindow);
-            setShading(JSON.parse(JSON.stringify(originalWindow.shading)));
-            dispatch({ type: 'SET_SELECTED_DIRECTION', payload: newWindow.direction });
+        if (isModalOpen) {
+            if (isNew) {
+                const defaultWindow: Window = {
+                    id: 0, // temp ID
+                    type: 'modern', direction: 'S', u: 0.9, shgc: 0.5, width: 1.5, height: 2.3,
+                    shading: { enabled: false, type: 'louvers', location: 'indoor', color: 'light', setting: 'tilted_45', material: 'open' }
+                };
+                setWindow(defaultWindow);
+                setShading(defaultWindow.shading);
+                dispatch({ type: 'SET_SELECTED_DIRECTION', payload: defaultWindow.direction });
+            } else {
+                const originalWindow = state.windows.find(w => w.id === windowId);
+                if (originalWindow) {
+                    const windowCopy = JSON.parse(JSON.stringify(originalWindow));
+                    setWindow(windowCopy);
+                    setShading(windowCopy.shading);
+                    dispatch({ type: 'SET_SELECTED_DIRECTION', payload: windowCopy.direction });
+                }
+            }
         } else {
             setWindow(null);
             setShading(null);
         }
-    }, [isModalOpen, originalWindow]);
+    }, [isModalOpen, windowId, state.windows, isNew]);
 
     useEffect(() => {
         if (window) {
@@ -41,8 +54,14 @@ const WindowEditModal: React.FC = () => {
     const handleClose = () => dispatch({ type: 'SET_MODAL', payload: { isOpen: false } });
 
     const handleSave = () => {
-        if (window) {
-            dispatch({ type: 'UPDATE_WINDOW', payload: { ...window, shading: shading! } });
+        if (window && shading) {
+            const finalWindow = { ...window, shading };
+            if (isNew) {
+                const { id, ...windowData } = finalWindow;
+                dispatch({ type: 'ADD_WINDOW', payload: windowData as Omit<Window, 'id'> });
+            } else {
+                dispatch({ type: 'UPDATE_WINDOW', payload: finalWindow });
+            }
             handleClose();
         }
     };
@@ -105,18 +124,19 @@ const WindowEditModal: React.FC = () => {
     
     const shadingDb = state.allData?.shading[window.type as keyof typeof state.allData.shading] || state.allData?.shading.standard || {};
     const description = WINDOW_TYPE_DESCRIPTIONS[window.type as keyof typeof WINDOW_TYPE_DESCRIPTIONS];
+    const modalTitle = isNew ? "Dodaj Nowe Okno" : `Edytuj Okno ${window.id}`;
 
     return (
         <Modal 
             isOpen={isModalOpen} 
             onClose={handleClose} 
-            title={`Edytuj Okno ${window.id}`}
+            title={modalTitle}
             maxWidth="max-w-2xl"
             disableBackdropClick={true}
             disableEscKey={true}
             footer={<>
                 <Button variant="secondary" onClick={handleClose}>Anuluj</Button>
-                <Button onClick={handleSave}>Zapisz zmiany</Button>
+                <Button onClick={handleSave}>{isNew ? 'Dodaj Okno' : 'Zapisz zmiany'}</Button>
             </>}
         >
             <div className="space-y-4">
