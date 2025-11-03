@@ -31,7 +31,7 @@ export interface AccumulationSettings {
 
 export interface PeopleGains {
     enabled: boolean;
-    count: number;
+    count: number | '';
     activityLevel: 'seated_very_light' | 'standing_light' | 'walking_moderate' | 'heavy_sport';
     startHour: number;
     endHour: number;
@@ -40,7 +40,7 @@ export interface PeopleGains {
 export interface LightingGains {
     enabled: boolean;
     type: string;
-    powerDensity: number;
+    powerDensity: number | '';
     startHour: number;
     endHour: number;
 }
@@ -48,8 +48,8 @@ export interface LightingGains {
 export interface EquipmentGains {
     id: number;
     name: string;
-    power: number;
-    quantity: number;
+    power: number | '';
+    quantity: number | '';
     startHour: number;
     endHour: number;
 }
@@ -63,7 +63,7 @@ export interface InternalGains {
 
 export interface VentilationGains {
     enabled: boolean;
-    airflow: number; // m3/h
+    airflow: number | ''; // m3/h
     exchangerType: 'counterflow_hrv' | 'counterflow_erv' | 'rotary_condensing' | 'rotary_sorption';
 }
 

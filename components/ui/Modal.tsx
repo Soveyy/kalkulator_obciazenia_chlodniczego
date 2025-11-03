@@ -7,14 +7,16 @@ interface ModalProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   maxWidth?: string;
+  disableBackdropClick?: boolean;
+  disableEscKey?: boolean;
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer, maxWidth = 'max-w-xl' }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer, maxWidth = 'max-w-xl', disableBackdropClick = false, disableEscKey = false }) => {
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      if (event.key === 'Escape' && !disableEscKey) {
         onClose();
       }
     };
@@ -22,14 +24,20 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer,
     return () => {
       window.removeEventListener('keydown', handleEsc);
     };
-  }, [onClose]);
+  }, [onClose, disableEscKey]);
 
   if (!isOpen) return null;
+
+  const handleBackdropClick = () => {
+    if (!disableBackdropClick) {
+        onClose();
+    }
+  };
 
   return (
     <div 
       className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4 transition-opacity duration-300"
-      onClick={onClose}
+      onClick={handleBackdropClick}
     >
       <div
         ref={modalRef}

@@ -75,13 +75,6 @@ const Sidebar: React.FC = () => {
                             </div>
                             <div>
                                 <label className="label-style flex items-center">
-                                    Projektowana wilgotność wewn. (%):
-                                    <Tooltip text="Projektowana wilgotność względna powietrza wewnątrz. Używana do obliczenia obciążenia utajonego z wentylacji." />
-                                </label>
-                                <Input name="rhInternal" type="number" value={state.input.rhInternal} onChange={(e) => dispatch({ type: 'SET_INPUT', payload: { ...state.input, [e.target.name]: e.target.value } })} />
-                            </div>
-                            <div>
-                                <label className="label-style flex items-center">
                                     Temperatura zewn. (°C):
                                     <Tooltip text="Maksymalna projektowana dobowa temperatura zewnętrzna." />
                                 </label>
@@ -89,13 +82,6 @@ const Sidebar: React.FC = () => {
                                     <Input name="tExternal" type="number" value={state.input.tExternal} onChange={(e) => dispatch({ type: 'SET_INPUT', payload: { ...state.input, [e.target.name]: e.target.value } })} />
                                     <Button variant="secondary" className="px-2 py-1" onClick={() => dispatch({ type: 'SET_MODAL', payload: { isOpen: true, type: 'tempDatabase' } })}>Baza</Button>
                                  </div>
-                            </div>
-                             <div>
-                                <label className="label-style flex items-center">
-                                    Temp. punktu rosy zewn. (°C):
-                                    <Tooltip text="Projektowa temperatura punktu rosy powietrza zewnętrznego. Używana do obliczenia obciążenia utajonego z wentylacji." />
-                                </label>
-                                <Input name="tDewPoint" type="number" value={state.input.tDewPoint} onChange={(e) => dispatch({ type: 'SET_INPUT', payload: { ...state.input, [e.target.name]: e.target.value } })} />
                             </div>
                              <div>
                                 <label className="label-style flex items-center">

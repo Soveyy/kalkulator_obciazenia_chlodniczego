@@ -15,17 +15,26 @@ const InternalGainsPanel: React.FC = () => {
         const { name, value, type } = e.target;
         const checked = (e.target as HTMLInputElement).checked;
         
-        let val: string | number | boolean;
-        if (type === 'checkbox') {
-            val = checked;
-        } else if (name === 'count' || name === 'startHour' || name === 'endHour') {
-            val = parseInt(value, 10);
-            if (isNaN(val)) val = 0;
-        } else {
-            val = value;
-        }
+        const currentPeopleGains = state.internalGains.people;
+        let newPeopleGains = { ...currentPeopleGains };
 
-        dispatch({ type: 'SET_INTERNAL_GAINS', payload: { ...state.internalGains, people: { ...state.internalGains.people, [name]: val } } });
+        if (type === 'checkbox') {
+            (newPeopleGains as any)[name] = checked;
+        } else if (name === 'count') {
+            if (value === '') {
+                newPeopleGains.count = '';
+            } else {
+                const num = parseInt(value, 10);
+                if (!isNaN(num) && num >= 0) {
+                    newPeopleGains.count = Math.floor(num);
+                }
+            }
+        } else { // activityLevel, startHour, endHour
+             const numValue = parseInt(value, 10);
+            (newPeopleGains as any)[name] = isNaN(numValue) ? value : numValue;
+        }
+    
+        dispatch({ type: 'SET_INTERNAL_GAINS', payload: { ...state.internalGains, people: newPeopleGains } });
     };
 
     const handleLightingChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -36,7 +45,16 @@ const InternalGainsPanel: React.FC = () => {
         if (type === 'checkbox') {
             val = checked;
         } else if (name === 'powerDensity') {
-            val = parseFloat(value) || 0;
+             if (value === '') {
+                val = '';
+            } else {
+                const num = parseFloat(value);
+                if (!isNaN(num) && num >= 0) {
+                    val = Math.floor(num);
+                } else {
+                    return; 
+                }
+            }
         } else if (['startHour', 'endHour'].includes(name)) {
             val = parseInt(value, 10);
         } else {
@@ -45,7 +63,7 @@ const InternalGainsPanel: React.FC = () => {
 
         const newLightingGains = { ...state.internalGains.lighting, [name]: val };
         
-        if (name === 'type') {
+        if (name === 'type' && value !== state.internalGains.lighting.type) {
             newLightingGains.powerDensity = LIGHTING_TYPES[value]?.powerDensity || 0;
         }
 
@@ -54,9 +72,23 @@ const InternalGainsPanel: React.FC = () => {
 
     const handleEquipmentChange = (id: number, e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        const updatedEquipment = state.internalGains.equipment.map(item => 
-            item.id === id ? { ...item, [name]: name === 'name' ? value : parseInt(value) || 0 } : item
-        );
+        const updatedEquipment = state.internalGains.equipment.map(item => {
+            if (item.id !== id) return item;
+
+            if (name === 'name') {
+                return { ...item, name: value };
+            }
+            
+            if (value === '') {
+                return { ...item, [name]: '' };
+            }
+            
+            const num = parseInt(value, 10);
+            if (!isNaN(num) && num >= 0) {
+                return { ...item, [name]: Math.floor(num) };
+            }
+            return item;
+        });
         dispatch({ type: 'SET_INTERNAL_GAINS', payload: { ...state.internalGains, equipment: updatedEquipment } });
     };
     
@@ -134,7 +166,7 @@ const InternalGainsPanel: React.FC = () => {
                             </div>
                              <div>
                                 <label className="label-style">Gęstość mocy (W/m²):</label>
-                                <Input type="number" name="powerDensity" value={state.internalGains.lighting.powerDensity} onChange={handleLightingChange} step="0.1" />
+                                <Input type="number" name="powerDensity" value={state.internalGains.lighting.powerDensity} onChange={handleLightingChange} step="1" min="0" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
@@ -177,8 +209,8 @@ const InternalGainsPanel: React.FC = () => {
                     {state.internalGains.equipment.map(item => (
                         <div key={item.id} className="grid grid-cols-[1fr,80px,50px,140px,auto] gap-2 items-center">
                             <Input name="name" value={item.name} onChange={(e) => handleEquipmentChange(item.id, e)} className="text-xs" />
-                            <Input name="power" type="number" value={item.power} onChange={(e) => handleEquipmentChange(item.id, e)} className="text-xs text-center" />
-                            <Input name="quantity" type="number" value={item.quantity} onChange={(e) => handleEquipmentChange(item.id, e)} className="text-xs text-center" />
+                            <Input name="power" type="number" value={item.power} onChange={(e) => handleEquipmentChange(item.id, e)} className="text-xs text-center" min="0" />
+                            <Input name="quantity" type="number" value={item.quantity} onChange={(e) => handleEquipmentChange(item.id, e)} className="text-xs text-center" min="0" />
                             <div className="flex items-center gap-1 text-xs">
                                 <Select name="startHour" value={item.startHour} onChange={(e) => handleEquipmentHoursChange(item.id, e)} className="text-xs py-1.5">
                                     {Array.from({length: 24}, (_, i) => <option key={i} value={i}>{`${i}:00`}</option>)}

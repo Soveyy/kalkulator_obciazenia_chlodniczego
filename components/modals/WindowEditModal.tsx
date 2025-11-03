@@ -112,6 +112,8 @@ const WindowEditModal: React.FC = () => {
             onClose={handleClose} 
             title={`Edytuj Okno ${window.id}`}
             maxWidth="max-w-2xl"
+            disableBackdropClick={true}
+            disableEscKey={true}
             footer={<>
                 <Button variant="secondary" onClick={handleClose}>Anuluj</Button>
                 <Button onClick={handleSave}>Zapisz zmiany</Button>

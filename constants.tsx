@@ -129,7 +129,8 @@ export const EQUIPMENT_PRESETS: { [key: string]: { label: string, power: number 
     monitor: { label: 'Monitor', power: 40 },
     printer: { label: 'Drukarka laserowa', power: 100 },
     tv: { label: 'Telewizor LED', power: 80 },
-    coffee: { label: 'Ekspres do kawy', power: 1200 },
+    coffee: { label: 'Ekspres do kawy', power: 120 },
+    fridge: { label: 'Lodówka', power: 50 },
 };
 
 export const WINDOW_PRESETS: { [key: string]: { u: number, shgc: number } } = {

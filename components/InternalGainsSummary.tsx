@@ -7,12 +7,12 @@ const InternalGainsSummary: React.FC = () => {
     const { state } = useCalculator();
     const { people, lighting, equipment } = state.internalGains;
 
-    const peopleSensible = people.enabled ? people.count * (PEOPLE_ACTIVITY_LEVELS[people.activityLevel]?.sensible || 0) : 0;
-    const peopleLatent = people.enabled ? people.count * (PEOPLE_ACTIVITY_LEVELS[people.activityLevel]?.latent || 0) : 0;
+    const peopleSensible = people.enabled ? (Number(people.count) || 0) * (PEOPLE_ACTIVITY_LEVELS[people.activityLevel]?.sensible || 0) : 0;
+    const peopleLatent = people.enabled ? (Number(people.count) || 0) * (PEOPLE_ACTIVITY_LEVELS[people.activityLevel]?.latent || 0) : 0;
 
-    const lightingPower = lighting.enabled ? (parseFloat(state.input.roomArea) || 0) * lighting.powerDensity : 0;
+    const lightingPower = lighting.enabled ? (parseFloat(state.input.roomArea) || 0) * (Number(lighting.powerDensity) || 0) : 0;
 
-    const equipmentPower = equipment.reduce((acc, item) => acc + (item.power * item.quantity), 0);
+    const equipmentPower = equipment.reduce((acc, item) => acc + ((Number(item.power) || 0) * (Number(item.quantity) || 0)), 0);
 
     const totalSensible = peopleSensible + lightingPower + equipmentPower;
     const totalLatent = peopleLatent;

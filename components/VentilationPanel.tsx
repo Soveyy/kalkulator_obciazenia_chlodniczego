@@ -10,22 +10,35 @@ import Tooltip from './ui/Tooltip';
 const VentilationPanel: React.FC = () => {
     const { state, dispatch } = useCalculator();
     const { ventilation } = state.internalGains;
+    const { input } = state;
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
         const checked = (e.target as HTMLInputElement).checked;
         
-        let val: string | number | boolean;
-        if (type === 'checkbox') {
-            val = checked;
-        } else if (name === 'airflow') {
-            val = parseInt(value, 10);
-            if (isNaN(val)) val = 0;
-        } else {
-            val = value;
-        }
+        let newVentilationGains = { ...ventilation };
 
-        dispatch({ type: 'SET_VENTILATION_GAINS', payload: { ...ventilation, [name]: val } });
+        if (type === 'checkbox') {
+            (newVentilationGains as any)[name] = checked;
+        } else if (name === 'airflow') {
+            if (value === '') {
+                newVentilationGains.airflow = '';
+            } else {
+                const num = parseInt(value, 10);
+                if (!isNaN(num) && num >= 0) {
+                    newVentilationGains.airflow = Math.floor(num);
+                }
+            }
+        } else { // exchangerType
+            (newVentilationGains as any)[name] = value;
+        }
+    
+        dispatch({ type: 'SET_VENTILATION_GAINS', payload: newVentilationGains });
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        dispatch({ type: 'SET_INPUT', payload: { ...input, [name]: value } });
     };
 
     return (
@@ -49,6 +62,20 @@ const VentilationPanel: React.FC = () => {
                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                                 {VENTILATION_EXCHANGER_TYPES[ventilation.exchangerType]?.description}
                             </p>
+                        </div>
+                        <div>
+                            <label className="label-style flex items-center">
+                                Projektowana wilgotność wewn. (%):
+                                <Tooltip text="Projektowana wilgotność względna powietrza wewnątrz. Używana do obliczenia obciążenia utajonego z wentylacji." />
+                            </label>
+                            <Input name="rhInternal" type="number" value={input.rhInternal} onChange={handleInputChange} />
+                        </div>
+                        <div>
+                            <label className="label-style flex items-center">
+                                Temp. punktu rosy zewn. (°C):
+                                <Tooltip text="Projektowa temperatura punktu rosy powietrza zewnętrznego. Używana do obliczenia obciążenia utajonego z wentylacji." />
+                            </label>
+                            <Input name="tDewPoint" type="number" value={input.tDewPoint} onChange={handleInputChange} />
                         </div>
                     </div>
                 )}
