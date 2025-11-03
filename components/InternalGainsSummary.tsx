@@ -6,9 +6,28 @@ import Card from './ui/Card';
 const InternalGainsSummary: React.FC = () => {
     const { state } = useCalculator();
     const { people, lighting, equipment } = state.internalGains;
+    const { tInternal } = state.input;
 
-    const peopleSensible = people.enabled ? (Number(people.count) || 0) * (PEOPLE_ACTIVITY_LEVELS[people.activityLevel]?.sensible || 0) : 0;
-    const peopleLatent = people.enabled ? (Number(people.count) || 0) * (PEOPLE_ACTIVITY_LEVELS[people.activityLevel]?.latent || 0) : 0;
+    let peopleSensible = 0;
+    let peopleLatent = 0;
+
+    if (people.enabled) {
+        const count = Number(people.count) || 0;
+        const activity = PEOPLE_ACTIVITY_LEVELS[people.activityLevel];
+        if (activity) {
+            const baseSensible = count * activity.sensible;
+            const baseLatent = count * activity.latent;
+
+            if (parseFloat(tInternal) >= 27) {
+                const reduction = baseSensible * 0.20;
+                peopleSensible = baseSensible - reduction;
+                peopleLatent = baseLatent + reduction;
+            } else {
+                peopleSensible = baseSensible;
+                peopleLatent = baseLatent;
+            }
+        }
+    }
 
     const lightingPower = lighting.enabled ? (parseFloat(state.input.roomArea) || 0) * (Number(lighting.powerDensity) || 0) : 0;
 

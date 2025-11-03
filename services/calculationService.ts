@@ -258,11 +258,21 @@ export function calculateGainsForMonth(
             const peopleCount = Number(internalGains.people.count) || 0;
             const startHourUTC = (internalGains.people.startHour - offset + 24) % 24;
             const endHourUTC = (internalGains.people.endHour - offset + 24) % 24;
+
+            let sensibleGain = activity.sensible;
+            let latentGain = activity.latent;
+
+            if (tInternal >= 27) {
+                const sensibleReduction = sensibleGain * 0.20;
+                sensibleGain -= sensibleReduction;
+                latentGain += sensibleReduction;
+            }
+
             for (let hour = 0; hour < 24; hour++) {
                 if(isHourActive(hour, startHourUTC, endHourUTC)) {
-                    internalGainsSensibleRadiant[hour] += peopleCount * activity.sensible * activity.radiantFraction;
-                    internalGainsSensibleConvective[hour] += peopleCount * activity.sensible * (1 - activity.radiantFraction);
-                    internalGainsLatent[hour] += peopleCount * activity.latent;
+                    internalGainsSensibleRadiant[hour] += peopleCount * sensibleGain * activity.radiantFraction;
+                    internalGainsSensibleConvective[hour] += peopleCount * sensibleGain * (1 - activity.radiantFraction);
+                    internalGainsLatent[hour] += peopleCount * latentGain;
                 }
             }
         }

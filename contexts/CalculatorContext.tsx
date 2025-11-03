@@ -52,6 +52,7 @@ type Action =
     | { type: 'REMOVE_TOAST'; payload: number }
     | { type: 'SAVE_PROJECT' }
     | { type: 'LOAD_PROJECT' }
+    | { type: 'RESET_PROJECT' }
     | { type: 'SET_STATE'; payload: Partial<State> }
     | { type: 'SET_ACTIVE_TAB'; payload: AppTab }
     | { type: 'SET_SELECTED_DIRECTION', payload: string | null }
@@ -408,6 +409,15 @@ export const CalculatorProvider: React.FC<{children: ReactNode}> = ({ children }
             } else {
                 dispatch({ type: 'ADD_TOAST', payload: { message: 'Nie znaleziono zapisanego projektu.', type: 'info' } });
             }
+        } else if (action.type === 'RESET_PROJECT') {
+            setInitialCalculationDone(false);
+            dispatch({ type: 'SET_STATE', payload: {
+                windows: initialState.windows,
+                input: initialState.input,
+                accumulation: initialState.accumulation,
+                internalGains: initialState.internalGains,
+            }});
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'Ustawienia zostały zresetowane.', type: 'info' } });
         } else if (['SET_INPUT', 'SET_ACCUMULATION', 'SET_INTERNAL_GAINS', 'ADD_WINDOW', 'UPDATE_WINDOW', 'DELETE_WINDOW', 'DUPLICATE_WINDOW', 'UPDATE_ALL_SHADING', 'ADD_EQUIPMENT_ITEM', 'DELETE_EQUIPMENT_ITEM', 'SET_VENTILATION_GAINS'].includes(action.type)) {
              if (initialCalculationDone) {
                  dispatch(action);

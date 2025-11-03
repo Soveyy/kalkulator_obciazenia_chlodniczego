@@ -55,9 +55,12 @@ const Sidebar: React.FC = () => {
                                 </label>
                                 <Input name="projectName" type="text" value={state.input.projectName} onChange={(e) => dispatch({ type: 'SET_INPUT', payload: { ...state.input, [e.target.name]: e.target.value } })} />
                             </div>
-                            <div className="flex gap-2">
-                                <Button fullWidth onClick={() => dispatch({ type: 'SAVE_PROJECT' })}>Zapisz</Button>
-                                <Button fullWidth variant="secondary" onClick={() => dispatch({ type: 'LOAD_PROJECT' })}>Wczytaj</Button>
+                            <div className="space-y-2">
+                                <div className="flex gap-2">
+                                    <Button fullWidth onClick={() => dispatch({ type: 'SAVE_PROJECT' })}>Zapisz</Button>
+                                    <Button fullWidth variant="secondary" onClick={() => dispatch({ type: 'LOAD_PROJECT' })}>Wczytaj</Button>
+                                </div>
+                                <Button fullWidth variant="danger" onClick={() => dispatch({ type: 'RESET_PROJECT' })}>Resetuj</Button>
                             </div>
                          </div>
                     </Card>

@@ -7,6 +7,7 @@ import Select from './ui/Select';
 import Button from './ui/Button';
 import { PEOPLE_ACTIVITY_LEVELS, LIGHTING_TYPES, EQUIPMENT_PRESETS } from '../constants';
 import { TrashIcon, PlusIcon } from './Icons';
+import Tooltip from './ui/Tooltip';
 
 const InternalGainsPanel: React.FC = () => {
     const { state, dispatch } = useCalculator();
@@ -123,7 +124,10 @@ const InternalGainsPanel: React.FC = () => {
                                 <Input type="number" name="count" value={state.internalGains.people.count} onChange={handlePeopleChange} min="0" />
                             </div>
                             <div>
-                                <label className="label-style">Poziom aktywności:</label>
+                                <label className="label-style flex items-center">
+                                    Poziom aktywności:
+                                    <Tooltip text="Zyski ciepła od ludzi są korygowane w zależności od temperatury wewnętrznej. Dla temp. >= 27°C, zysk jawny jest zmniejszany o 20%, a utajony odpowiednio zwiększany." />
+                                </label>
                                 <Select name="activityLevel" value={state.internalGains.people.activityLevel} onChange={handlePeopleChange}>
                                     {Object.entries(PEOPLE_ACTIVITY_LEVELS).map(([key, value]) => (
                                         <option key={key} value={key}>{value.label}</option>
@@ -224,7 +228,7 @@ const InternalGainsPanel: React.FC = () => {
                     ))}
                 </div>
             </Card>
-            <style>{`.label-style { display: block; margin-bottom: 0.25rem; font-medium; color: #475569; } .dark .label-style { color: #cbd5e1; }`}</style>
+            <style>{`.label-style { display: block; text-sm font-medium mb-1 text-slate-700 dark:text-slate-300; }`}</style>
         </div>
     );
 };
